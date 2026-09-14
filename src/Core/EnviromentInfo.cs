@@ -20,6 +20,12 @@ public static class EnvironmentInfo
 	RuntimeInformation.RuntimeIdentifier,
 	AppContext.BaseDirectory);
 
+#if NET10_0_OR_GREATER
+    private const string BuildNote = "збірка під net10.0";
+#else
+    private const string BuildNote = "збірка під net8.0";
+#endif
+
 //Ручне визначення RID: показує, з чого складається рядок win-x64
     private static string DetectRid()
     {
