@@ -36,6 +36,8 @@
 
 &#x09;## Структура solution
 
+\## Структура проєкту
+
 BookKing/
 
 ├── BookKing.sln
@@ -44,13 +46,37 @@ BookKing/
 
 ├── .gitignore
 
+├── data/
+
+│   ├── sample.csv          # Книги у форматі CSV (валідні та пошкоджені записи)
+
+│   ├── sample.json         # Книги у форматі JSON
+
+│   └── mixed.csv           # Змішані дані (рядки B; для книг та R; для читачів)
+
 └── src/
 
 &#x20;   ├── Core/
 
 &#x20;   │   ├── Core.csproj
 
-&#x20;   │   └── EnvironmentInfo.cs
+&#x20;   │   ├── EnvironmentInfo.cs
+
+&#x20;   │   ├── Dto/
+
+&#x20;   │   │   ├── BookDto.cs
+
+&#x20;   │   │   └── ReaderDto.cs
+
+&#x20;   │   └── Import/
+
+&#x20;   │       ├── ImportResult.cs
+
+&#x20;   │       ├── BookCsvImporter.cs
+
+&#x20;   │       ├── BookJsonImporter.cs
+
+&#x20;   │       └── MixedCsvImporter.cs
 
 &#x20;   └── Cli/
 
@@ -66,59 +92,41 @@ dotnet build
 
 
 
-&#x09;## Run
-
-dotnet run --project src/Cli
+&#x09;## Збірка та запуск
 
 
 
-&#x09;## Запуск опублікованого Windows self-contained застосунку:
+&#x20;   Збірка розв'язку:
+
+dotnet build
 
 
 
-publish\\win-x64-self\\Cli.exe
+&#x20;   Запуск стандартного CSV-імпорту (за замовчуванням data/sample.csv):
 
-&#x09;
-
-&#x09;## Publish
+dotnet run --project src\\Cli
 
 
 
-&#x20;   Windows x64 — self-contained
+&#x20;   Запуск з явним шляхом до CSV:
 
-dotnet publish src\\Cli -c Release -f net10.0 -r win-x64 --self-contained true -o publish\\win-x64-self
-
-
-
-&#x20;   Windows x64 — framework-dependent
-
-dotnet publish src\\Cli -c Release -f net10.0 -r win-x64 --self-contained false -o publish\\win-x64-fdd
+dotnet run --project src\\Cli -- data\\sample.csv
 
 
 
-&#x20;   Linux x64 — self-contained
+&#x20;   Запуск JSON-імпорту:
 
-dotnet publish src\\Cli -c Release -f net10.0 -r linux-x64 --self-contained true -o publish\\linux-x64-self
-
-
-
-&#x20;   Linux x64 — framework-dependent
-
-dotnet publish src\\Cli -c Release -f net10.0 -r linux-x64 --self-contained false -o publish\\linux-x64-fdd
+dotnet run --project src\\Cli -- data\\sample.json
 
 
 
-&#x09;## Порівняння режимів публікації
+&#x20;   Запуск обробки різнорідних рядків:
 
-| RID       | Режим                | Розмір publish | Потрібен встановлений runtime |
+dotnet run --project src\\Cli -- --mixed data\\mixed.csv
 
-|-----------|----------------------|----------------|-------------------------------|
 
-| win-x64   | self-contained       |  77 МБ         | ні                            |
 
-| win-x64   | framework-dependent  | 0,2 МБ         | так (.NET 10)                 |
+&#x20;   Перевірка обробки непідтримуваного формату:
 
-| linux-x64 | self-contained       |  79 МБ         | ні                            |
-
-| linux-x64 | framework-dependent  | 0,1 МБ         | так (.NET 10)                 |
+dotnet run --project src\\Cli -- data\\sample.txt
 
