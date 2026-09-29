@@ -62,13 +62,21 @@ BookKing/
 
 &#x20;   │   ├── EnvironmentInfo.cs
 
-&#x20;   │   ├── Dto/
+&#x20;   │   ├── Dto/            # DTO тижня 3 (формат перенесення даних)
 
 &#x20;   │   │   ├── BookDto.cs
 
 &#x20;   │   │   └── ReaderDto.cs
 
-&#x20;   │   └── Import/
+&#x20;   │   ├── Domain/         # НОВЕ: багата доменна модель (Лабораторна 4)
+
+&#x20;   │   │   ├── Book.cs
+
+&#x20;   │   │   ├── Loan.cs
+
+&#x20;   │   │   └── LoanStatus.cs
+
+&#x20;   │   └── Import/         # Логіка парсингу та імпорту файлів
 
 &#x20;   │       ├── ImportResult.cs
 
@@ -83,6 +91,30 @@ BookKing/
 &#x20;       ├── Cli.csproj
 
 &#x20;       └── Program.cs
+
+
+
+&#x09;## Інваріанти
+
+| \*\*Метод\*\*            | \*\*Інваріант (бізнес-правило)\*\*                     | \*\*Тип винятку\*\*               |
+
+|----------------------|----------------------------------------------------|-------------------------------|
+
+| `Book.Create`        | Ключі `id`, `isbn` та назва непорожні              | `ArgumentException`            |
+
+| `Book.Create`        | Рік (1450..поточний) та кількість ($\\ge 0$) валідні | `ArgumentOutOfRangeException`  |
+
+| `Book.IssueCopy`     | Заборонено видачу, коли залишок примірників = 0   | `InvalidOperationException`    |
+
+| `Loan.Open`          | Ідентифікатори `id` та `readerId` непорожні        | `ArgumentException`            |
+
+| `Loan.OpenForReader` | Читач не може мати більше 5 активних видач         | `InvalidOperationException`    |
+
+| `Loan.Close`         | Дата повернення не може бути раніше дати видачі    | `ArgumentOutOfRangeException`  |
+
+| `Loan.Close`         | Не можна закрити чужу книгу або вже закриту видачу | `InvalidOperationException`    |
+
+| `Loan.TransitionTo`  | Заборонено невалідне переведення статусу видачі    | `InvalidOperationException`    |
 
 
 
@@ -111,22 +143,4 @@ dotnet run --project src\\Cli
 &#x20;   Запуск з явним шляхом до CSV:
 
 dotnet run --project src\\Cli -- data\\sample.csv
-
-
-
-&#x20;   Запуск JSON-імпорту:
-
-dotnet run --project src\\Cli -- data\\sample.json
-
-
-
-&#x20;   Запуск обробки різнорідних рядків:
-
-dotnet run --project src\\Cli -- --mixed data\\mixed.csv
-
-
-
-&#x20;   Перевірка обробки непідтримуваного формату:
-
-dotnet run --project src\\Cli -- data\\sample.txt
 

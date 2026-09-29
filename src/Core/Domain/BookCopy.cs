@@ -36,9 +36,9 @@ public sealed class Book
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("Назва книги не може бути порожньою", nameof(title));
 
-        if (year < 868 || year > DateTime.UtcNow.Year)
+        if (year < 1450 || year > 2026)
             throw new ArgumentOutOfRangeException(nameof(year), year,
-                $"Рік видання має бути в межах від 868 до {DateTime.UtcNow.Year}");
+                $"Рік видання має бути в межах від 1450 до 2026");
 
         if (availableCopies < 0)
             throw new ArgumentOutOfRangeException(nameof(availableCopies), availableCopies,
