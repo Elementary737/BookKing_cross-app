@@ -1,6 +1,7 @@
 ﻿using Core;
 using Core.Dto;
 using Core.Import;
+using Core.Domain;
 
 EnvironmentReport report = EnvironmentInfo.Collect();
 
@@ -99,4 +100,62 @@ Console.WriteLine(
     $"Статистика: усього {total} | прийнято {result.Items.Count} | " +
     $"пропущено {result.Errors.Count} | помилок {errorRate:F1}%");
 
+Console.WriteLine();
+Console.WriteLine("ЛАБОРАТОРНА РОБОТА 4: Доменна модель та інваріанти");
+
+Console.WriteLine("\n=== Сценарій 1: Успіх ===");
+// Використовуємо першу імпортовану книгу або створюємо зразкову
+Book book = result.Items.Count > 0 
+    ? Book.FromDto(result.Items[0], availableCopies: 1)
+    : Book.Create("B-001", "978-0-13-235088-4", "Clean Code", 2008, "Robert Martin", availableCopies: 1);
+
+Console.WriteLine($"Створено доменну сутність: {book}");
+
+// Фіксуємо чіткі дати без звернення до DateTime.Now (наприклад, видача 1 вересня, повернення 15 вересня):
+DateTime issueDate = new DateTime(2026, 9, 1);
+DateTime returnDate = new DateTime(2026, 9, 15);
+
+Loan loan = Loan.Open("L-001", book, "R-101", issueDate);
+Console.WriteLine($"Книгу видано читачу:");
+Console.WriteLine($"  {loan}");
+Console.WriteLine($"  Стан книги: {book}");
+
+loan.Close(book, returnDate);
+Console.WriteLine($"Книгу повернено:");
+Console.WriteLine($"  {loan}");
+Console.WriteLine($"  Стан книги: {book}");
+
+Console.WriteLine("\n=== Сценарій 2: Порушення інваріантів ===");
+
+// 1. Порожній ISBN (ArgumentException)
+TryDo("Створення книги з порожнім ISBN", () => 
+    Book.Create("B-002", "   ", "Title", 2020));
+
+// 2. Некоректний рік видання (ArgumentOutOfRangeException)
+TryDo("Створення книги з некоректним роком (з майбутнього)", () => 
+    Book.Create("B-003", "978-1-23-456789-0", "Future Book", 2099));
+
+// 3. Спроба видати книгу, коли примірники закінчилися (InvalidOperationException)
+Book singleBook = Book.Create("B-004", "978-0-201-48567-7", "DDD", 2003, availableCopies: 0);
+TryDo("Видача відсутнього примірника (залишок 0)", () => 
+    singleBook.IssueCopy());
+
+// 4. Повернення раніше дати видачі (ArgumentOutOfRangeException)
+Book activeBook = Book.Create("B-005", "978-0-13-449416-6", "Architecture", 2017, availableCopies: 1);
+Loan activeLoan = Loan.Open("L-002", activeBook, "R-102", new DateTime(2026, 9, 1));
+TryDo("Дата повернення раніше дати видачі", () => 
+    activeLoan.Close(activeBook, new DateTime(2026, 8, 20)));
+
+static void TryDo(string title, Action action)
+{
+    try
+    {
+        action();
+        Console.WriteLine($"  [!] {title}: виняток НЕ спрацював — інваріант відсутній!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"  [OK] {title}: {ex.GetType().Name} — {ex.Message}");
+    }
+}
 return 0;
