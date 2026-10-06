@@ -39,60 +39,43 @@
 \## Структура проєкту
 
 BookKing/
-
 ├── BookKing.sln
-
 ├── README.md
-
 ├── .gitignore
-
 ├── data/
-
-│   ├── sample.csv          # Книги у форматі CSV (валідні та пошкоджені записи)
-
-│   ├── sample.json         # Книги у форматі JSON
-
-│   └── mixed.csv           # Змішані дані (рядки B; для книг та R; для читачів)
-
+│   ├── sample.csv          # Книги у форматі CSV (Лабораторна 3)
+│   ├── sample.json         # Книги у форматі JSON (Лабораторна 3)
+│   ├── mixed.csv           # Змішані дані B; та R; (Лабораторна 3)
+│   └── books.json          # Збереження каталогу на диск (Лабораторна 5, створюється під час запуску)
 └── src/
-
-&#x20;   ├── Core/
-
-&#x20;   │   ├── Core.csproj
-
-&#x20;   │   ├── EnvironmentInfo.cs
-
-&#x20;   │   ├── Dto/            # DTO тижня 3 (формат перенесення даних)
-
-&#x20;   │   │   ├── BookDto.cs
-
-&#x20;   │   │   └── ReaderDto.cs
-
-&#x20;   │   ├── Domain/         # НОВЕ: багата доменна модель (Лабораторна 4)
-
-&#x20;   │   │   ├── Book.cs
-
-&#x20;   │   │   ├── Loan.cs
-
-&#x20;   │   │   └── LoanStatus.cs
-
-&#x20;   │   └── Import/         # Логіка парсингу та імпорту файлів
-
-&#x20;   │       ├── ImportResult.cs
-
-&#x20;   │       ├── BookCsvImporter.cs
-
-&#x20;   │       ├── BookJsonImporter.cs
-
-&#x20;   │       └── MixedCsvImporter.cs
-
-&#x20;   └── Cli/
-
-&#x20;       ├── Cli.csproj
-
-&#x20;       └── Program.cs
-
-
+    ├── Core/
+    │   ├── Core.csproj
+    │   ├── EnvironmentInfo.cs
+    │   ├── SampleData.cs           # Початковий набір зразкових книг для сховища
+    │   ├── Dto/                    # DTO (формат серіалізації та імпорту)
+    │   │   ├── BookDto.cs
+    │   │   └── ReaderDto.cs
+    │   ├── Domain/                 # Доменна модель та інваріанти (Лабораторна 4)
+    │   │   ├── Book.cs
+    │   │   ├── Loan.cs
+    │   │   └── LoanStatus.cs
+    │   ├── Abstractions/           # Контракти (Лабораторна 5)
+    │   │   └── IBookStore.cs       # Інтерфейс сховища книг
+    │   ├── Storage/                # Реалізації сховищ (Лабораторна 5)
+    │   │   ├── InMemoryBookStore.cs # Сховище в оперативній пам'яті (RAM)
+    │   │   ├── FileBookStore.cs    # Файлове персистентне сховище (JSON)
+    │   │   ├── CachingBookStore.cs # Декоратор кешування (Додаткове завдання 1)
+    │   │   └── StoreFactory.cs     # Фабрика вибору сховища (Додаткове завдання 3)
+    │   ├── Services/               # Сервісний шар (Лабораторна 5)
+    │   │   └── LendingService.cs   # Бізнес-операції (видача, повернення, предикативний пошук)
+    │   └── Import/                 # Логіка парсингу та імпорту
+    │       ├── ImportResult.cs
+    │       ├── BookCsvImporter.cs
+    │       ├── BookJsonImporter.cs
+    │       └── MixedCsvImporter.cs
+    └── Cli/
+        ├── Cli.csproj
+        └── Program.cs              # Composition Root та демонстрація сценаріїв
 
 &#x09;## Інваріанти
 
@@ -144,3 +127,15 @@ dotnet run --project src\\Cli
 
 dotnet run --project src\\Cli -- data\\sample.csv
 
+
+Запуск (Лабораторна 5):
+Режим оперативної пам'яті (InMemory):
+
+dotnet run --project src/Cli
+(Створює InMemoryBookStore, дані після завершення скидаються до початкових).
+
+Файловий режим (Persistent JSON):
+
+Bash
+dotnet run --project src/Cli -- --file
+(Створює FileBookStore, дані зберігаються та оновлюються у файлі data/books.json).
