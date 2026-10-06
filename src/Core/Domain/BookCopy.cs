@@ -69,6 +69,14 @@ public sealed class Book
         _availableCopies++;
     }
 
+    public void AddCopies(int count)
+    {
+        if (count <= 0)
+            throw new ArgumentOutOfRangeException(nameof(count), "Кількість примірників має бути більшою за 0");
+
+        _availableCopies += count;
+    }
+
     // Мапінг у ваш BookDto і назад
     public BookDto ToDto() => new(Id, Isbn, Title, Year, Author);
 

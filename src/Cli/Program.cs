@@ -2,6 +2,9 @@
 using Core.Dto;
 using Core.Import;
 using Core.Domain;
+using Core.Abstractions;
+using Core.Storage;
+using Core.Services;
 
 EnvironmentReport report = EnvironmentInfo.Collect();
 
@@ -19,86 +22,10 @@ Console.WriteLine($"RID (від .NET) : {report.ReportedRid}");
 Console.WriteLine(new string('-', 52));
 Console.WriteLine("Предметна область: Бібліотека (книги, примірники, читачі, видачі)");
 
-if (args.Length > 0 && args[0] == "--mixed")
-{
-    string mixedPath = args.Length > 1 ? args[1] : Path.Combine("data", "mixed.csv");
-    if (!File.Exists(mixedPath))
-    {
-        Console.WriteLine($"Файл не знайдено: {Path.GetFullPath(mixedPath)}");
-        return 1;
-    }
-
-    var mixed = MixedCsvImporter.Load(mixedPath);
-
-    Console.WriteLine($"Завантажено книг: {mixed.Books.Count}");
-    foreach (var b in mixed.Books)
-        Console.WriteLine($"  [Книга] {b.Id,-6} {b.Title,-30} ({b.Year})");
-
-    Console.WriteLine($"Завантажено читачів: {mixed.Readers.Count}");
-    foreach (var r in mixed.Readers)
-        Console.WriteLine($"  [Читач] {r.Id,-6} {r.FullName,-20} квиток: {r.CardNumber}");
-
-    if (mixed.Errors.Count > 0)
-    {
-        Console.WriteLine($"Пропущено рядків: {mixed.Errors.Count}");
-        foreach (var err in mixed.Errors)
-            Console.WriteLine($"  ! {err}");
-    }
-
-    int totalMixed = mixed.Books.Count + mixed.Readers.Count + mixed.Errors.Count;
-    double mixedErrorRate = totalMixed > 0 ? (double)mixed.Errors.Count / totalMixed * 100 : 0.0;
-    Console.WriteLine($"Статистика: усього {totalMixed} | прийнято {mixed.Books.Count + mixed.Readers.Count} | пропущено {mixed.Errors.Count} | помилок {mixedErrorRate:F1}%");
-
-    return 0;
-}
-
-string path = args.Length > 0
-    ? args[0]
-    : Path.Combine("data", "sample.csv");
-
-if (!File.Exists(path))
-{
-    Console.WriteLine($"Файл не знайдено: {Path.GetFullPath(path)}");
-    return 1;
-}
-
-ImportResult<BookDto>? result =
-    Path.GetExtension(path).ToLowerInvariant() switch
-    {
-        ".csv" => BookCsvImporter.Load(path),
-        ".json" => BookJsonImporter.Load(path),
-        _ => null
-    };
-
-if (result is null)
-{
-    Console.WriteLine($"Помилка: формат файлу '{Path.GetExtension(path)}' не підтримується.");
-    return 1;
-}
-
-Console.WriteLine($"Завантажено записів: {result.Items.Count}");
-
-foreach (BookDto b in result.Items.Take(5))
-{
-    Console.WriteLine(
-        $"  {b.Id,-6} {b.Isbn,-16} {b.Title,-32} {b.Year,4}  {b.Author ?? "-"}");
-}
-if (result.Errors.Count > 0)
-{
-    Console.WriteLine($"Пропущено рядків: {result.Errors.Count}");
-
-    foreach (string error in result.Errors)
-        Console.WriteLine($"  ! {error}");
-}
-
-int total = result.Items.Count + result.Errors.Count;
-double errorRate = total > 0
-    ? (double)result.Errors.Count / total * 100
-    : 0.0;
-
-Console.WriteLine(
-    $"Статистика: усього {total} | прийнято {result.Items.Count} | " +
-    $"пропущено {result.Errors.Count} | помилок {errorRate:F1}%");
+string path = Path.Combine("data", "sample.csv");
+ImportResult<BookDto> result = File.Exists(path)
+    ? BookCsvImporter.Load(path)
+    : new ImportResult<BookDto>([], []);
 
 Console.WriteLine();
 Console.WriteLine("ЛАБОРАТОРНА РОБОТА 4: Доменна модель та інваріанти");
@@ -192,6 +119,67 @@ Console.WriteLine($"Успішне закриття: {stateLoan.Status}");
 TryDo("Спроба оголосити вже повернену книгу втраченою (Returned -> Lost)", () =>
     stateLoan.TransitionTo(LoanStatus.Lost));
 
+Console.WriteLine("\n" + new string('=', 52));
+Console.WriteLine("ЛАБОРАТОРНА РОБОТА 5");
+
+bool useFile = args.Contains("--file");
+string dataPath = Path.Combine("data", "books.json");
+
+IBookStore store;
+if (useFile)
+{
+    var fileStore = new FileBookStore(dataPath);
+    if (fileStore.List().Count == 0)
+    {
+        foreach (var b in SampleData.Books())
+        {
+            fileStore.Add(b);
+        }
+    }
+    store = fileStore;
+}
+else
+{
+    store = new InMemoryBookStore(SampleData.Books());
+}
+
+var lendingService = new LendingService(store);
+Console.WriteLine($"Активне сховище: {store.GetType().Name}\n");
+
+Console.WriteLine("--- 1. Додавання книги через сервіс ---");
+var newBook = lendingService.AddBook("978-6177858347", "Таємнича пригода в Стайлзі", 1920, "Аґата Крісті", availableCopies: 2);
+Console.WriteLine($"Додано: {newBook.Title} (ID: {newBook.Id})");
+
+Console.WriteLine("\n--- 2. Видача примірника ---");
+try
+{
+    lendingService.IssueCopy("B-022");
+    Console.WriteLine("Успішно видано 1 примірник книги ID: B-022");
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"[Очікувана помилка бізнес-логіки]: {ex.Message}");
+}
+
+Console.WriteLine("\n--- 3. Сценарій відмови: видача неіснуючого ID ---");
+try
+{
+    lendingService.IssueCopy("non-existent-id");
+    Console.WriteLine("Успішно видано 1 примірник книги ID: non-existent-id");
+}
+catch (InvalidOperationException ex)
+{
+    Console.WriteLine($"[Очікувана помилка бізнес-логіки]: {ex.Message}");
+}
+
+Console.WriteLine("\n--- 4. Каталог книг у сховищі (останні 5 доданих) ---");
+foreach (var b in lendingService.All().TakeLast(5).Reverse())
+{
+    Console.WriteLine($"  [{b.Id}] {b.Title,-30} | {b.Author,-18} | Залишок: {b.AvailableCopies}");
+}
+
+return 0;
+
 static void TryDo(string title, Action action)
 {
     try
@@ -227,5 +215,3 @@ static (List<Book> Books, List<string> AllErrors) ConvertToDomain(ImportResult<B
 
     return (validBooks, allErrors);
 }
-
-return 0;
