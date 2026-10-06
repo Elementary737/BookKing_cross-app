@@ -122,29 +122,14 @@ TryDo("Спроба оголосити вже повернену книгу вт
 Console.WriteLine("\n" + new string('=', 52));
 Console.WriteLine("ЛАБОРАТОРНА РОБОТА 5");
 
-bool useFile = args.Contains("--file");
 string dataPath = Path.Combine("data", "books.json");
 
-IBookStore store;
-if (useFile)
-{
-    var fileStore = new FileBookStore(dataPath);
-    if (fileStore.List().Count == 0)
-    {
-        foreach (var b in SampleData.Books())
-        {
-            fileStore.Add(b);
-        }
-    }
-    store = fileStore;
-}
-else
-{
-    store = new InMemoryBookStore(SampleData.Books());
-}
+// Додаткове 5.3
+IBookStore baseStore = StoreFactory.Create(args, dataPath);
+IBookStore store = new CachingBookStore(baseStore);
 
 var lendingService = new LendingService(store);
-Console.WriteLine($"Активне сховище: {store.GetType().Name}\n");
+Console.WriteLine($"Активне сховище: {baseStore.GetType().Name}\n");
 
 Console.WriteLine("--- 1. Додавання книги через сервіс ---");
 var newBook = lendingService.AddBook("978-6177858347", "Таємнича пригода в Стайлзі", 1920, "Аґата Крісті", availableCopies: 2);
@@ -176,6 +161,34 @@ Console.WriteLine("\n--- 4. Каталог книг у сховищі (оста�
 foreach (var b in lendingService.All().TakeLast(5).Reverse())
 {
     Console.WriteLine($"  [{b.Id}] {b.Title,-30} | {b.Author,-18} | Залишок: {b.AvailableCopies}");
+}
+
+// Додаткове 5.1
+baseStore = new FileBookStore(dataPath);
+store = new CachingBookStore(baseStore);
+
+Console.WriteLine("=== Додаткове завдання 1: CachingBookStore ===");
+var firstRead = store.GetById("B-020");
+var secondRead = store.GetById("B-020");
+
+Console.WriteLine($"Книга: {secondRead?.Title}");
+Console.WriteLine($"Отримано той самий екземпляр з пам'яті: {ReferenceEquals(firstRead, secondRead)}");
+
+// Додаткове завдання 5.2
+Console.WriteLine("\n=== Додаткове завдання 2: Пошук за предикатом ===");
+
+var outOfStock = lendingService.Find(b => b.AvailableCopies == 0);
+Console.WriteLine($"Книг із нульовим залишком: {outOfStock.Count}");
+foreach (var item in outOfStock)
+{
+    Console.WriteLine($"  * [{item.Id}] {item.Title} (залишок: {item.AvailableCopies})");
+}
+
+var doyleBooks = lendingService.Find(b => b.Author == "Артур Конан Дойл");
+Console.WriteLine($"Книг автора 'Артур Конан Дойл': {doyleBooks.Count}");
+foreach (var item in doyleBooks)
+{
+    Console.WriteLine($"  * [{item.Id}] {item.Title}");
 }
 
 return 0;

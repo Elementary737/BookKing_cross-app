@@ -94,4 +94,10 @@ public sealed class FileBookStore(string path) : IBookStore
         Flush();
         return true;
     }
+    public IReadOnlyList<Book> Find(Func<Book, bool> predicate)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        EnsureLoaded();
+        return _cache.Values.Where(predicate).ToList();
+    }
 }

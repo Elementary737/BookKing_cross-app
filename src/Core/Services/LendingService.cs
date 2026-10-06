@@ -46,4 +46,7 @@ public sealed class LendingService(IBookStore store)
     public IReadOnlyList<Book> All() => _store.List();
 
     public Book? Find(string id) => _store.GetById(id);
+
+    public IReadOnlyList<Book> Find(Func<Book, bool> predicate) => _store.Find(predicate);
+
 }

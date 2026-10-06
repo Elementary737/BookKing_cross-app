@@ -22,6 +22,12 @@ public sealed class InMemoryBookStore(IEnumerable<Book>? seed = null) : IBookSto
         _items.Add(book.Id, book);
     }
 
+    public IReadOnlyList<Book> Find(Func<Book, bool> predicate)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        return _items.Values.Where(predicate).ToList();
+    }
+
     public void Update(Book book)
     {
         ArgumentNullException.ThrowIfNull(book);
