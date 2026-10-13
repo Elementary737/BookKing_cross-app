@@ -77,7 +77,7 @@ public sealed class Book
         _availableCopies += count;
     }
 
-    // Мапінг у ваш BookDto і назад
+    // Мапінг у BookDto і назад
     public BookDto ToDto() => new(Id, Isbn, Title, Year, Author);
 
     public static Book FromDto(BookDto dto, int availableCopies = 1) =>
