@@ -76,10 +76,100 @@ switch (command)
     }
 
     case "report-demo":
+    {
         Console.WriteLine("[ДОСЛІДЖЕННЯ] Демонстрація механізму відкладеного виконання (Deferred Execution):");
         Console.WriteLine(new string('-', 72));
         RunDeferredDemo();
         break;
+    }
+
+    case "report-join":
+    {
+        Console.WriteLine("[ДОДАТКОВЕ 1] Зведений звіт GroupJoin (Видання x Видачі):");
+        Console.WriteLine(new string('-', 76));
+        Console.WriteLine($"{"Назва книги",-36} | {"ISBN",-15} | {"Всього",6} | {"Активних",8}");
+        Console.WriteLine(new string('-', 76));
+
+        var bookOsm = books.First(b => b.Id == "B-004");
+        var bookOmer = books.First(b => b.Id == "B-001");
+        var bookBeckett = books.First(b => b.Id == "B-009");
+
+        var sampleLoans = new List<Loan>
+        {
+            Loan.Open("L-001", bookOsm, "R-01", DateTime.Now.AddDays(-10)),
+            Loan.Open("L-002", bookOsm, "R-02", DateTime.Now.AddDays(-5)),
+            Loan.Open("L-003", bookOmer, "R-01", DateTime.Now.AddDays(-2)),
+            Loan.Open("L-004", bookBeckett, "R-03", DateTime.Now.AddDays(-20))
+        };
+
+        var joinReport = ReportService.BookLoansReport(books, sampleLoans);
+        foreach (var r in joinReport)
+            Console.WriteLine($"{r.BookTitle,-36} | {r.Isbn,-15} | {r.TotalLoansCount,6} | {r.ActiveLoansCount,8}");
+
+        break;
+    }
+
+    case "report-ext":
+    {
+        Console.WriteLine("[ДОДАТКОВЕ 2] Власний метод-розширення TopBy у 2 звітах:");
+        Console.WriteLine(new string('-', 76));
+
+        Console.WriteLine("1. Топ-3 книги за найбільшою кількістю примірників (TopBy b.AvailableCopies):");
+        Console.WriteLine(new string('-', 76));
+        var topCopies = ReportService.TopCopiesByExtension(books, 3);
+        PrintBooks(topCopies);
+
+        Console.WriteLine();
+        Console.WriteLine("2. Топ-3 найновіших книги фонду (TopBy b.Year):");
+        Console.WriteLine(new string('-', 76));
+        var topNewest = ReportService.TopNewestByExtension(books, 3);
+        PrintBooks(topNewest);
+
+        break;
+    }
+
+    case "report-syntax":
+    {
+        Console.WriteLine("[ДОДАТКОВЕ 3] Звіт за десятиліттями у синтаксисі запитів (Query Syntax):");
+        Console.WriteLine(new string('-', 50));
+        Console.WriteLine($"{"Період",-12} | {"Назв",5} | {"Примірників",12}");
+        Console.WriteLine(new string('-', 50));
+
+        var querySyntaxResult = ReportService.ByDecadeQuerySyntax(books);
+        foreach (var g in querySyntaxResult)
+            Console.WriteLine($"{g.Key,-12} | {g.Count,5} | {g.TotalCopies,12}");
+
+        break;
+    }
+
+    case "report-bench":
+    {
+        Console.WriteLine("[ДОДАТКОВЕ 4] Порівняння продуктивності Stopwatch (100 000 об'єктів):");
+        Console.WriteLine(new string('-', 72));
+        Console.WriteLine("Генерація 100 000 записів та виконання фільтрації...");
+
+        var (withListMs, directMs) = ReportService.BenchmarkToList(100_000);
+
+        Console.WriteLine($"• Варіант ІЗ проміжним ToList() : {withListMs,4} мс");
+        Console.WriteLine($"• Варіант БЕЗ ToList() (стрім)  : {directMs,4} мс");
+        Console.WriteLine(new string('-', 72));
+
+        var diff = Math.Abs(withListMs - directMs);
+        if (directMs < withListMs)
+        {
+            Console.WriteLine($"Результат: варіант БЕЗ ToList() швидший на {diff} мс.");
+        }
+        else if (withListMs < directMs)
+        {
+            Console.WriteLine($"Результат: варіант ІЗ ToList() швидший на {diff} мс.");
+        }
+        else
+        {
+            Console.WriteLine("Результат: час виконання обох варіантів однаковий.");
+        }
+
+        break;
+    }
 
     default:
         Console.WriteLine("Невідома команда. Доступні опції:");
@@ -88,8 +178,13 @@ switch (command)
         Console.WriteLine("  report-groups - аналітичне групування (за авторами та десятиліттями)");
         Console.WriteLine("  report-sum    - підсумкова статистика фонду");
         Console.WriteLine("  report-demo   - перевірка відкладеного виконання LINQ");
+	Console.WriteLine("  report-join   - зведений звіт GroupJoin (видання x видачі)");
+	Console.WriteLine("  report-ext    - перевірка власного методу-розширення TopBy");
+	Console.WriteLine("  report-syntax - звіт за десятиліттями у синтаксисі запитів (Query Syntax)");
+	Console.WriteLine("  report-bench  - бенчмарк Stopwatch на 100 000 записах (вплив ToList)");
         break;
 }
+
 
 return 0;
 
