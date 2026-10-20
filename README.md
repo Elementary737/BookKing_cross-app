@@ -50,11 +50,15 @@ BookKing/
 │   ├── mixed.csv           # Змішані дані B; та R; (Лабораторна 3)
 │   └── books.json          # Збереження каталогу на диск (Лабораторна 5)
 │
+├── logs/
+│   └── sink_notifications.log # Журнал сповіщень FileSink (Лабораторна 6)
+│
 └── src/
     ├── Core/
     │   ├── Core.csproj
     │   ├── EnvironmentInfo.cs
     │   ├── SampleData.cs           # Початковий набір зразкових книг
+    │   ├── INotificationSink.cs    # Контракт каналу сповіщень (Лабораторна 6)
     │   │
     │   ├── Dto/
     │   │   ├── BookDto.cs
@@ -64,6 +68,9 @@ BookKing/
     │   │   ├── Book.cs
     │   │   ├── Loan.cs
     │   │   └── LoanStatus.cs
+    │   │
+    │   ├── Events/
+    │   │   └── LibraryChanged.cs   # Доменні події та типи змін (Лабораторна 6)
     │   │
     │   ├── Abstractions/
     │   │   └── IBookStore.cs
@@ -75,7 +82,7 @@ BookKing/
     │   │   └── StoreFactory.cs
     │   │
     │   ├── Services/
-    │   │   └── LendingService.cs
+    │   │   └── LendingService.cs   # Події, DI (Sink), ImportBooks (Лабораторна 6)
     │   │
     │   └── Import/
     │       ├── ImportResult.cs
@@ -85,6 +92,7 @@ BookKing/
     │
     └── Cli/
         ├── Cli.csproj
+        ├── Sinks.cs                # ConsoleSink, FileSink, CompositeNotificationSink (Лабораторна 6)
         └── Program.cs
 ```
 
@@ -116,37 +124,21 @@ BookKing/
 
 dotnet build
 
+Запуск демонстраційного сценарію Лабораторної 6:
+dotnet run --project src\Cli
 
+Перевірка створеного лог-файлу сповіщень:
+type logs\sink_notifications.log
 
-&#x09;## Збірка та запуск
+## Звіт до Лабораторної роботи №6 (Події, Делегати та Сповіщення)
 
+### 1. Доменні події предметної області
+Подіями вважаються лише операції мутації агрегатів: `BookAdded` (поповнення фонду), `CopyIssued` (видача примірника читачу із фіксацією терміну) та `CopyReturned` (повернення на баланс). Операції читання/пошуку (`Find`, `All`) подіями не є, оскільки не змінюють стан системи.
 
+### 2. Різниця між подією та прямим викликом логера
+Подія реалізує патерн Publish-Subscribe і слабку зв'язність (Loose Coupling): сервіс нічого не знає про слухачів, тоді як прямий виклик логера нав'язує жорстку залежність. Два конкретні наслідки:
 
-&#x20;   Збірка розв'язку:
+Принцип OCP: Додавання нових обробників (SMS, моніторинг, кеш) не потребує зміни коду LendingService — підписка виконується ззовні.
 
-dotnet build
-
-
-
-&#x20;   Запуск стандартного CSV-імпорту (за замовчуванням data/sample.csv):
-
-dotnet run --project src\\Cli
-
-
-
-&#x20;   Запуск з явним шляхом до CSV:
-
-dotnet run --project src\\Cli -- data\\sample.csv
-
-
-Запуск ЛАБОРАТОРНА 5:
-Режим оперативної пам'яті (InMemory):
-
-dotnet run --project src/Cli
-(Створює InMemoryBookStore, дані після завершення скидаються до початкових).
-
-Файловий режим (Persistent JSON):
-
-Bash
-dotnet run --project src/Cli -- --file
-(Створює FileBookStore, дані зберігаються та оновлюються у файлі data/books.json).
+Ізоляція та тестування: Модульні тести перевіряють бізнес-правила без створення моків логера (Changed просто рівний null), а збій у сторонньому логері не ламає виконання самої операції повернення чи видачі.
+}

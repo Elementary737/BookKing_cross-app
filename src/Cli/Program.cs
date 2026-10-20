@@ -6,6 +6,7 @@ using Core.Abstractions;
 using Core.Storage;
 using Core.Services;
 using Core.Events;
+using Cli;
 
 EnvironmentReport report = EnvironmentInfo.Collect();
 
@@ -91,4 +92,44 @@ foreach (var b in availableBooks)
 {
     Console.WriteLine($"  * [{b.Id}] \"{b.Title}\" — Доступно: {b.AvailableCopies} шт.");
 }
+
+Console.WriteLine("\n=== Додаткове завдання 1: INotificationSink через DI ===");
+
+var sinkStore = new InMemoryBookStore();
+var sinkLogPath = Path.Combine(Directory.GetCurrentDirectory(), "logs", "sink_notifications.log");
+
+var compositeSink = new CompositeNotificationSink(
+    new ConsoleSink(),
+    new FileSink(sinkLogPath)
+);
+
+var sinkService = new LendingService(sinkStore, compositeSink);
+
+sinkService.AddBook("978-0063279070", "Усі в моїй родині вбивці", 2022, "Бенджамін Стівенсон", 4);
+
+Console.WriteLine("Сповіщення збережено у файл: logs/sink_notifications.log");
+
+// ДОДАТКОВЕ ЗАВДАННЯ 2: ImportBooks з Action-колбеком помилок
+Console.WriteLine("\n=== Додаткове завдання 2: ImportBooks з Action-колбеком ===");
+
+var importStore = new InMemoryBookStore();
+var importService = new LendingService(importStore);
+
+var rawCsvLines = new List<string>
+{
+    "978-0063279070;Усі в моїй родині вбивці;2022;Бенджамін Стівенсон;4",
+    "978-0063348493;Кожен у цьому поїзді підозрюваний;bad_year;Бенджамін Стівенсон;2",
+    "   ",
+    "978-0008305888;Убивства за абеткою;1936;Аґата Крісті;-1",
+    "978-0525658184;Клуб убивств по четвергам;2020;Річард Осман;3"
+};
+
+int skipped = 0;
+int imported = importService.ImportBooks(rawCsvLines, (rowNum, lineText, reason) =>
+{
+    skipped++;
+    Console.WriteLine($"  [Рядок {rowNum} відхилено]: {reason} -> \"{lineText.Trim()}\"");
+});
+
+Console.WriteLine($"\nПідсумок: успішно імпортовано {imported}, пропущено {skipped}");
 return 0;
