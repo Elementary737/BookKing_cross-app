@@ -7,6 +7,7 @@ using Core.Storage;
 using Core.Services;
 using Core.Events;
 using Cli;
+using Core.Reports;
 
 EnvironmentReport report = EnvironmentInfo.Collect();
 
@@ -15,121 +16,105 @@ Console.WriteLine("Студентка: Гулай Ірина Костянтин�
 Console.WriteLine("Предметна область: Бібліотека (книги, примірники, читачі, видачі)");
 Console.WriteLine(new string('-', 52));
 
-Console.WriteLine("\n" + new string('=', 52));
-Console.WriteLine("ЛАБОРАТОРНА РОБОТА 6: Доменні події та делегати");
-Console.WriteLine(new string('=', 52));
+var books = SampleData.Books();
+var command = args.FirstOrDefault(a => !a.StartsWith("--")) ?? "report-top";
 
-var logPath = Path.Combine(Directory.GetCurrentDirectory(), "logs", "app.log");
-Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-
-var store = new InMemoryBookStore();
-var service = new LendingService(store);
-
-void OnLibraryChanged(object? sender, LibraryChangedEventArgs e)
+switch (command)
 {
-    var message = e.Kind switch
+    case "report-top":
     {
-        LibraryChangeKind.CopyIssued => $"видано читачу {e.ReaderId} до {e.DueDate:yyyy-MM-dd}",
-        LibraryChangeKind.CopyReturned => "повернено до фонду",
-        _ => "додано новий примірник"
-    };
+        var top = ReportService.TopNewest(books, 5);
+        Console.WriteLine($"[ЗВІТ] Топ найновіших видань у каталозі ({top.Count} позицій):");
+        Console.WriteLine(new string('-', 72));
+        PrintBooks(top);
+        break;
+    }
 
-    var line = $"{e.At:HH:mm:ss} {e.Kind,-13} [{e.CopyId}] {message}";
-    Console.WriteLine($"  [Event Log] {line}");
-    File.AppendAllText(logPath, line + Environment.NewLine);
+    case "report-low":
+    {
+        const int thresholdYear = 1950;
+        var vintage = ReportService.VintageBooks(books, thresholdYear);
+        Console.WriteLine($"[ЗВІТ] Знайдено {vintage.Count} раритетних видань (до {thresholdYear} року):");
+        Console.WriteLine(new string('-', 72));
+        PrintBooks(vintage);
+        break;
+    }
+
+    case "report-groups":
+    {
+        Console.WriteLine("[ЗВІТ 1] Розподіл книжкового фонду за авторами:");
+        Console.WriteLine(new string('-', 60));
+        Console.WriteLine($"{"Автор",-26} | {"Назв",5} | {"Примірників",12}");
+        Console.WriteLine(new string('-', 60));
+        var byAuthor = ReportService.ByAuthor(books);
+        foreach (var g in byAuthor)
+            Console.WriteLine($"{g.Key,-26} | {g.Count,5} | {g.TotalCopies,12}");
+
+        Console.WriteLine();
+        Console.WriteLine("[ЗВІТ 2] Хронологічний розподіл фонду за десятиліттями:");
+        Console.WriteLine(new string('-', 45));
+        Console.WriteLine($"{"Період",-12} | {"Назв",5} | {"Примірників",12}");
+        Console.WriteLine(new string('-', 45));
+        var byDecade = ReportService.ByDecade(books);
+        foreach (var g in byDecade)
+            Console.WriteLine($"{g.Key,-12} | {g.Count,5} | {g.TotalCopies,12}");
+
+        break;
+    }
+    case "report-sum":
+    {
+        var t = ReportService.Totals(books);
+        Console.WriteLine("[ЗВІТ] Загальні підсумки та статистика книжкового фонду:");
+        Console.WriteLine(new string('-', 72));
+        Console.WriteLine($"• Унікальних назв у каталозі:      {t.Titles}");
+        Console.WriteLine($"• Загальний фонд примірників:      {t.TotalCopies} шт.");
+        Console.WriteLine($"• Мінімум примірників на назву:    {t.MinCopies} шт.");
+        Console.WriteLine($"• Середня кількість на назву:      {t.AverageCopies:F1} шт.");
+        Console.WriteLine($"• Максимум примірників в однієї:   {t.MaxCopies} шт.");
+        Console.WriteLine($"• Хронологічний діапазон фонду:    {t.MinYear} – {t.MaxYear} рр.");
+        break;
+    }
+
+    case "report-demo":
+        Console.WriteLine("[ДОСЛІДЖЕННЯ] Демонстрація механізму відкладеного виконання (Deferred Execution):");
+        Console.WriteLine(new string('-', 72));
+        RunDeferredDemo();
+        break;
+
+    default:
+        Console.WriteLine("Невідома команда. Доступні опції:");
+        Console.WriteLine("  report-top    - топ найновіших видань");
+        Console.WriteLine("  report-low    - фільтр раритетних книг до 1950 року");
+        Console.WriteLine("  report-groups - аналітичне групування (за авторами та десятиліттями)");
+        Console.WriteLine("  report-sum    - підсумкова статистика фонду");
+        Console.WriteLine("  report-demo   - перевірка відкладеного виконання LINQ");
+        break;
 }
 
-service.Changed += OnLibraryChanged;
-
-// Крок 4: Другий підписник
-int changes = 0;
-service.Changed += (_, _) => changes++;
-
-Console.WriteLine("\n--- Крок 5: Додавання та видача (працюють 2 підписники) ---");
-var book = service.AddBook("978-0132350884", "Clean Architecture", 2017, "Robert Martin", 3);
-
-var dueDate = new DateTimeOffset(2026, 10, 28, 18, 0, 0, TimeSpan.FromHours(3));
-service.IssueCopy(book.Id, "READER-042", dueDate);
-
-Console.WriteLine($"Подій зафіксовано лічильником: {changes}");
-
-Console.WriteLine("\n--- Відписка локального методу (-=) та тиха операція ---");
-service.Changed -= OnLibraryChanged;
-
-service.ReturnCopy(book.Id);
-Console.WriteLine($"Подій зафіксовано лічильником: {changes}"); 
-
-Console.WriteLine("\n--- Крок 6: Сценарій відмови (інваріант захищає подію) ---");
-try
-{
-    service.IssueCopy("non-existent-id", "READER-99", dueDate);
-}
-catch (InvalidOperationException ex)
-{
-    Console.WriteLine($"[Спіймано виняток]: {ex.Message}");
-}
-
-service.Changed -= OnLibraryChanged;
-
-Console.WriteLine($"Подій після помилки: {changes}");
-
-Console.WriteLine("\n--- Крок 7: Використання FindAll з Func-предикатом ---");
-
-service.AddBook("978-0201485677", "Refactoring", 1999, "Martin Fowler", 0);
-service.AddBook("978-0321125217", "Domain-Driven Design", 2003, "Eric Evans", 5);
-
-var allBooks = store.List();
-Console.WriteLine($"Усього книг у каталозі: {allBooks.Count}");
-foreach (var b in allBooks)
-{
-    Console.WriteLine($"  * [{b.Id}] \"{b.Title}\" — Доступно: {b.AvailableCopies} шт.");
-}
-
-var availableBooks = service.FindAll(b => b.AvailableCopies > 0);
-
-Console.WriteLine($"\nЗнайдено з залишком > 0: {availableBooks.Count}");
-foreach (var b in availableBooks)
-{
-    Console.WriteLine($"  * [{b.Id}] \"{b.Title}\" — Доступно: {b.AvailableCopies} шт.");
-}
-
-Console.WriteLine("\n=== Додаткове завдання 1: INotificationSink через DI ===");
-
-var sinkStore = new InMemoryBookStore();
-var sinkLogPath = Path.Combine(Directory.GetCurrentDirectory(), "logs", "sink_notifications.log");
-
-var compositeSink = new CompositeNotificationSink(
-    new ConsoleSink(),
-    new FileSink(sinkLogPath)
-);
-
-var sinkService = new LendingService(sinkStore, compositeSink);
-
-sinkService.AddBook("978-0063279070", "Усі в моїй родині вбивці", 2022, "Бенджамін Стівенсон", 4);
-
-Console.WriteLine("Сповіщення збережено у файл: logs/sink_notifications.log");
-
-// ДОДАТКОВЕ ЗАВДАННЯ 2: ImportBooks з Action-колбеком помилок
-Console.WriteLine("\n=== Додаткове завдання 2: ImportBooks з Action-колбеком ===");
-
-var importStore = new InMemoryBookStore();
-var importService = new LendingService(importStore);
-
-var rawCsvLines = new List<string>
-{
-    "978-0063279070;Усі в моїй родині вбивці;2022;Бенджамін Стівенсон;4",
-    "978-0063348493;Кожен у цьому поїзді підозрюваний;bad_year;Бенджамін Стівенсон;2",
-    "   ",
-    "978-0008305888;Убивства за абеткою;1936;Аґата Крісті;-1",
-    "978-0525658184;Клуб убивств по четвергам;2020;Річард Осман;3"
-};
-
-int skipped = 0;
-int imported = importService.ImportBooks(rawCsvLines, (rowNum, lineText, reason) =>
-{
-    skipped++;
-    Console.WriteLine($"  [Рядок {rowNum} відхилено]: {reason} -> \"{lineText.Trim()}\"");
-});
-
-Console.WriteLine($"\nПідсумок: успішно імпортовано {imported}, пропущено {skipped}");
 return 0;
+
+static void PrintBooks(IReadOnlyList<StockLine> lines)
+{
+    foreach (var l in lines)
+        Console.WriteLine($"{l.Isbn,-16} {l.Title,-32} {l.Author ?? "-",-20} {l.Year} р. ({l.AvailableCopies} прим.)");
+}
+
+static void RunDeferredDemo()
+{
+    var localBooks = SampleData.Books().ToList();
+
+    var query = localBooks.Where(b => b.Year < 1950);
+    Console.WriteLine($"1. Оголошено query (Where b.Year < 1950). Раритетних до змін: {query.Count()}");
+
+    Console.WriteLine("2. Додано новий елемент у джерело localBooks.Add(...)...");
+    localBooks.Add(Book.Create("B-TEMP", "978-0000000000", "Стародавній манускрипт", 1850, "Невідомий"));
+    Console.WriteLine($"3. Повторний query.Count(): {query.Count()} (запит заново пройшов по джерелу)");
+
+    Console.WriteLine("4. Матеріалізація результату у фіксований snapshot через query.ToList()...");
+    var snapshot = query.ToList();
+
+    Console.WriteLine("5. Повне очищення вихідного списку localBooks.Clear()...");
+    localBooks.Clear();
+
+    Console.WriteLine($"6. Залишилось у snapshot.Count: {snapshot.Count} (матеріалізовані дані збережено)");
+}
