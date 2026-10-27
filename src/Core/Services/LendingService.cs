@@ -39,7 +39,7 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
     public void IssueCopy(string id, string readerId, DateTimeOffset dueDate)
     {
         var book = _store.GetById(id)
-            ?? throw new InvalidOperationException($"Книгу з id={id} не знайдено.");
+            ?? throw new DomainException($"Книгу з id={id} не знайдено.");
 
         book.IssueCopy();
         _store.Update(book);
@@ -50,7 +50,7 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
     public void ReturnCopy(string id)
     {
         var book = _store.GetById(id)
-            ?? throw new InvalidOperationException($"Книгу з id={id} не знайдено.");
+            ?? throw new DomainException($"Книгу з id={id} не знайдено.");
 
         book.ReturnCopy();
         _store.Update(book);
@@ -110,5 +110,29 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
         }
 
         return imported;
+    }
+    
+    public async Task<int> ImportAsync(ICatalogImporter importer, string path, CancellationToken ct = default)
+    {
+        var items = await importer.LoadAsync(path, ct);
+        var added = 0;
+
+        foreach (var item in items)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var existingBook = _store.List()
+                .FirstOrDefault(b => string.Equals(b.Isbn, item.Isbn, StringComparison.OrdinalIgnoreCase));
+
+            if (existingBook is not null)
+                continue;
+
+            _store.Add(item);
+            OnChanged(item.Id, LibraryChangeKind.BookAdded);
+            _sink?.Notify($"Книга [{item.Id}]: імпортовано в систему ({item.Title})");
+            added++;
+        }
+
+        return added;
     }
 }

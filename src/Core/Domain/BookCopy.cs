@@ -58,7 +58,7 @@ public sealed class Book
     public void IssueCopy()
     {
         if (_availableCopies <= 0)
-            throw new InvalidOperationException($"Книгу \"{Title}\" [{Isbn}] видати неможливо: немає доступних примірників");
+            throw new DomainException($"Книгу \"{Title}\" [{Isbn}] видати неможливо: немає доступних примірників");
 
         _availableCopies--;
     }
