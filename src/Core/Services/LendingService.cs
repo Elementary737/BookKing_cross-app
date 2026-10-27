@@ -112,27 +112,16 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
         return imported;
     }
     
-    public async Task<int> ImportAsync(ICatalogImporter importer, string path, CancellationToken ct = default)
+    public async Task<int> ImportAsync(ICatalogImporter importer, string path, CancellationToken ct = default, IProgress<double>? progress = null)
     {
-        var items = await importer.LoadAsync(path, ct);
-        var added = 0;
-
-        foreach (var item in items)
+	// Додаткове 8.1
+	var count = 0;
+	await foreach (var book in importer.ReadStreamAsync(path, ct, progress))
         {
-            ct.ThrowIfCancellationRequested();
-
-            var existingBook = _store.List()
-                .FirstOrDefault(b => string.Equals(b.Isbn, item.Isbn, StringComparison.OrdinalIgnoreCase));
-
-            if (existingBook is not null)
-                continue;
-
-            _store.Add(item);
-            OnChanged(item.Id, LibraryChangeKind.BookAdded);
-            _sink?.Notify($"Книга [{item.Id}]: імпортовано в систему ({item.Title})");
-            added++;
+            _store.Add(book);
+            count++;
         }
 
-        return added;
+        return count;
     }
 }

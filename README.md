@@ -45,113 +45,95 @@ BookKing/
 ├── .gitignore
 │
 ├── data/
-│   ├── sample.csv          # Книги у форматі CSV (Лабораторна 3)
-│   ├── sample.json         # Книги у форматі JSON (Лабораторна 3)
-│   ├── mixed.csv           # Змішані дані B; та R; (Лабораторна 3)
-│   └── books.json          # Збереження каталогу на диск (Лабораторна 5)
+│   ├── sample.csv              # Книги у форматі CSV (Лабораторна 3)
+│   ├── sample.json             # Книги у форматі JSON для потокового імпорту (Лабораторна 8)
+│   ├── mixed.csv               # Змішані дані B; та R; (Лабораторна 3)
+│   └── books.json              # Збереження каталогу на диск (Лабораторна 5)
 │
 ├── logs/
-│   └── sink_notifications.log # Журнал сповіщень FileSink (Лабораторна 6)
+│   └── sink_notifications.log  # Журнал сповіщень FileSink (Лабораторна 6)
 │
-└── src/
-    ├── Core/
-    │   ├── Core.csproj
-    │   ├── EnvironmentInfo.cs
-    │   ├── SampleData.cs            # Початковий набір зразкових книг
-    │   ├── INotificationSink.cs    # Контракт каналу сповіщень (Лабораторна 6)
-    │   │
-    │   ├── Dto/
-    │   │   ├── BookDto.cs
-    │   │   └── ReaderDto.cs
-    │   │
-    │   ├── Domain/
-    │   │   ├── Book.cs
-    │   │   ├── Loan.cs
-    │   │   └── LoanStatus.cs
-    │   │
-    │   ├── Events/
-    │   │   └── LibraryChanged.cs   # Доменні події та типи змін (Лабораторна 6)
-    │   │
-    │   ├── Reports/                # Аналітичні звіти та DTO (Лабораторна 7)
-    │   │   ├── StockLine.cs        # DTO для відображення рядка книги в каталозі
-    │   │   ├── GroupSummary.cs     # DTO для результатів групування
-    │   │   ├── BookLoanSummary.cs  # DTO для зведеного звіту GroupJoin (Додаткове 1)
-    │   │   ├── LinqExtensions.cs   # Метод-розширення TopBy (Додаткове 2)
-    │   │   └── ReportService.cs    # Статичні методи звітів на LINQ to Objects
-    │   │
-    │   ├── Abstractions/
-    │   │   └── IBookStore.cs
-    │   │
-    │   ├── Storage/
-    │   │   ├── InMemoryBookStore.cs
-    │   │   ├── FileBookStore.cs
-    │   │   ├── CachingBookStore.cs
-    │   │   └── StoreFactory.cs
-    │   │
-    │   ├── Services/
-    │   │   └── LendingService.cs   # Події, DI (Sink), ImportBooks (Лабораторна 6)
-    │   │
-    │   └── Import/
-    │       ├── ImportResult.cs
-    │       ├── BookCsvImporter.cs
-    │       ├── BookJsonImporter.cs
-    │       └── MixedCsvImporter.cs
-    │
-    └── Cli/
-        ├── Cli.csproj
-        ├── Sinks.cs                # ConsoleSink, FileSink, CompositeNotificationSink (Лабораторна 6)
-        └── Program.cs              # Маршрутизація звітів та CLI-інтерфейс (Лабораторна 7)
+├── src/
+│   ├── Core/
+│   │   ├── Core.csproj
+│   │   ├── DomainException.cs      # Доменні винятки валідації даних (Лабораторна 8)
+│   │   ├── EnvironmentInfo.cs
+│   │   ├── SampleData.cs           # Початковий набір зразкових книг
+│   │   ├── INotificationSink.cs    # Контракт каналу сповіщень (Лабораторна 6)
+│   │   │
+│   │   ├── Dto/
+│   │   │   ├── BookDto.cs          # DTO десеріалізації для потокового читання (Лабораторна 8)
+│   │   │   ├── ReaderDto.cs
+│   │   │   └── ImportResult.cs
+│   │   │
+│   │   ├── Domain/
+│   │   │   ├── Book.cs             # Фабрика Book.FromDto та бізнес-інваріанти
+│   │   │   ├── Loan.cs
+│   │   │   └── LoanStatus.cs
+│   │   │
+│   │   ├── Events/
+│   │   │   └── LibraryChanged.cs   # Доменні події додавання книг (Лабораторна 6)
+│   │   │
+│   │   ├── Reports/                # Аналітичні звіти та DTO (Лабораторна 7)
+│   │   │   ├── StockLine.cs
+│   │   │   ├── GroupSummary.cs
+│   │   │   ├── BookLoanSummary.cs
+│   │   │   ├── LinqExtensions.cs
+│   │   │   └── ReportService.cs
+│   │   │
+│   │   ├── Abstractions/
+│   │   │   ├── IBookStore.cs
+│   │   │   └── ICatalogImporter.cs # Контракт потокового читання IAsyncEnumerable (Лабораторна 8)
+│   │   │
+│   │   ├── Storage/
+│   │   │   ├── InMemoryBookStore.cs
+│   │   │   ├── FileBookStore.cs
+│   │   │   ├── CachingBookStore.cs
+│   │   │   ├── StoreFactory.cs
+│   │   │   └── JsonCatalogImporter.cs # Потокове читання System.Text.Json + IProgress (Лабораторна 8)
+│   │   │
+│   │   ├── Services/
+│   │   │   └── LendingService.cs   # Метод ImportAsync з підтримкою CancellationToken (Лабораторна 8)
+│   │   │
+│   │   └── Import/
+│   │       ├── BookCsvImporter.cs
+│   │       ├── BookJsonImporter.cs
+│   │       └── MixedCsvImporter.cs
+│   │
+│   └── Cli/
+│       ├── Cli.csproj
+│       ├── Sinks.cs
+│       └── Program.cs              # LinkedTokenSource, таймаути, IProgress-бар (Лабораторна 8)
+│
+└── tests/
+    └── Core.Tests/
+        ├── Core.Tests.csproj
+        └── ImportTests.cs          # Юніт-тести потокового імпорту, таймауту, CancellationToken та прогресу
 ```
 
-&#x09;## Build
-
+# 1. Збірка
 dotnet build
 
-Запуск аналітичних звітів (Лабораторна 7):
+# 2. Стандартний запуск (sample.json, таймаут 30с, прогрес-бар)
+dotnet run --project src/Cli
 
-Виводить топ-5 найновіших видань каталогу, відсортованих за спаданням року випуску з детермінованою стабілізацією за ISBN:
-dotnet run --project src/Cli -- report-top
+# 3. Запуск із вказанням файлу
+dotnet run --project src/Cli -- "data/sample.json"
 
-Фільтрує та відображає раритетний фонд бібліотеки, вибираючи лише книги, видані до 1950 року:
-dotnet run --project src/Cli -- report-low
+# 4. Демонстрація таймауту (обмеження 1с)
+dotnet run --project src/Cli -- --timeout 1s
 
-Формує багаторівневу аналітику згрупованих даних: розподіл за авторами з підрахунком копій та хронологічний зріз за десятиліттями:
-dotnet run --project src/Cli -- report-groups
+# 5. Тести (11/11 успішних)
+dotnet test
 
-Обчислює зведені інвентарні показники фонду: кількість унікальних назв, суму примірників, мінімум, максимум, середній тираж і діапазон років:
-dotnet run --project src/Cli -- report-sum
+# 6. Збір покриття коду
+dotnet test --collect:"XPlat Code Coverage"
 
-Демонструє різницю між відкладеним виконанням фільтруючого ітератора Where та негайною матеріалізацією даних через ToList:
-dotnet run --project src/Cli -- report-demo
+Для більш зрозумілого виводу
+# 7. Встановлення генератора звітів (одноразово)
+dotnet new tool-manifest --force
+dotnet tool install dotnet-reportgenerator-globaltool
 
-Додаткові завдання:
-Виконує реляційне ліве об'єднання GroupJoin (аналог LEFT OUTER JOIN) між книгами та видачами з підрахунком загальних та активних видач:
-dotnet run --project src/Cli -- report-join
-
-Демонструє використання власного узагальненого методу-розширення TopBy у двох різних аналітичних сценаріях:
-dotnet run --project src/Cli -- report-ext
-
-Відображає розподіл фонду за десятиліттями за допомогою декларативного синтаксису запитів Query Syntax:
-dotnet run --project src/Cli -- report-syntax
-
-Проводить порівняльне вимірювання продуктивності Stopwatch на 100 000 згенерованих об'єктів з ToList() та без нього:
-dotnet run --project src/Cli -- report-bench
-
-## Звіт до Лабораторної роботи №7 (Аналітика через LINQ to Objects)
-
-### Дослідження відкладеного виконання (Deferred Execution)
-
-Оператор Where у LINQ to Objects реалізує відкладене виконання (deferred execution): під час оголошення запиту var query = localBooks.Where(b => b.Year < 1950); обчислення над колекцією не виконуються, а створюється об'єкт-ітератор, який лише зберігає логіку фільтрації. Безпосереднє виконання запиту та обхід елементів ініціюється викликом термінального методу Count().
-
-Оскільки між першим і другим викликами Count() до вихідної колекції localBooks було додано новий запис, повторний виклик Count() заново пройшов по поточному стану джерела і повернув оновлене значення. Натомість метод ToList() виконав негайну матеріалізацію послідовності у фіксовану колекцію snapshot у пам'яті. Подальше повне очищення вихідного списку через localBooks.Clear() не вплинуло на snapshot, і snapshot.Count зберіг попередній знімок даних.
-
-### Додаткове завдання 3. Синтаксис запитів (Query Syntax) та аналіз читабельності
-
-| Критерій | Method Syntax (Ланцюжок методів) | Query Syntax (Синтаксис запитів) |
-| --- | --- | --- |
-| **Синтаксис у коді** | `books.GroupBy(...).OrderBy(...).Select(...)` | `from b in books group ... by ... into g ...` |
-| **Результат у CLI** | Ідентичний вивід (`report-groups`) | Ідентичний вивід (`report-syntax`) |
-| **Компіляція (IL)** | Прямий виклик методів-розширень LINQ | Синтаксичний цукор (компілятор зводить до Method Syntax) |
-| **Читабельність** | Компактний, звичний стандарт для розробників .NET | Декларативний, наочний для спеціалістів із досвідом SQL |
-| **Робота з групами** | Через параметри вкладених лямбда-виразів | Ключове слово `into g` створює явну змінну піддіапазону |
-| **Обмеження** | Доступні всі оператори LINQ без винятків | Немає ключових слів для `Take`, `Skip`, `Count`, `Average` |
+# 8. Генерація та перегляд звіту (19.8% Core)
+dotnet tool run reportgenerator -reports:"tests/**/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:TextSummary
+type coveragereport\Summary.txt
