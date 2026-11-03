@@ -61,6 +61,9 @@ BookKing/
 │   │   ├── SampleData.cs           # Початковий набір зразкових книг
 │   │   ├── INotificationSink.cs    # Контракт каналу сповіщень (Лабораторна 6)
 │   │   │
+│   │   ├── Configuration/          # Моделі параметрів конфігурації
+│   │   │   └── AppOptions.cs       # AppOptions, StorageOptions (ResolveFullPath)
+│   │   │
 │   │   ├── Dto/
 │   │   │   ├── BookDto.cs          # DTO десеріалізації для потокового читання (Лабораторна 8)
 │   │   │   ├── ReaderDto.cs
@@ -87,7 +90,7 @@ BookKing/
 │   │   │
 │   │   ├── Storage/
 │   │   │   ├── InMemoryBookStore.cs
-│   │   │   ├── FileBookStore.cs
+│   │   │   ├── FileBookStore.cs    # Атомарний запис (.tmp), кирилиця, camelCase
 │   │   │   ├── CachingBookStore.cs
 │   │   │   ├── StoreFactory.cs
 │   │   │   └── JsonCatalogImporter.cs # Потокове читання System.Text.Json + IProgress (Лабораторна 8)
@@ -101,9 +104,11 @@ BookKing/
 │   │       └── MixedCsvImporter.cs
 │   │
 │   └── Cli/
-│       ├── Cli.csproj
+│       ├── Cli.csproj              # UserSecretsId, копіювання appsettings*.json
+│       ├── appsettings.json        # Базова конфігурація (сховище, ліміти, логування)
+│       ├── appsettings.Development.json # Перевизначення конфігурації для розробки
 │       ├── Sinks.cs
-│       └── Program.cs              # LinkedTokenSource, таймаути, IProgress-бар (Лабораторна 8)
+│       └── Program.cs              # Багаторівнева конфігурація, User Secrets, CWD-імунітет
 │
 └── tests/
     └── Core.Tests/
@@ -111,29 +116,32 @@ BookKing/
         └── ImportTests.cs          # Юніт-тести потокового імпорту, таймауту, CancellationToken та прогресу
 ```
 
-# 1. Збірка
+# 1. Налаштування та перевірка секретів (User Secrets)
+dotnet user-secrets set "Integration:ApiKey" "local-dev-key" --project src/Cli
+dotnet user-secrets list --project src/Cli
+
+# 2. Перевірка відсутності захардкодscope-шляхів
+git grep "C:" src/
+git grep "/home/" src/
+git grep -F "\\" src/
+
+# 3. Збірка та тестування
 dotnet build
-
-# 2. Стандартний запуск (sample.json, таймаут 30с, прогрес-бар)
-dotnet run --project src/Cli
-
-# 3. Запуск із вказанням файлу
-dotnet run --project src/Cli -- "data/sample.json"
-
-# 4. Демонстрація таймауту (обмеження 1с)
-dotnet run --project src/Cli -- --timeout 1s
-
-# 5. Тести (11/11 успішних)
 dotnet test
 
-# 6. Збір покриття коду
-dotnet test --collect:"XPlat Code Coverage"
+# 4. Демонстрація переносимості (CWD-імунітет)
+dotnet run --project src/Cli
+dotnet run --project src/Cli --property:RunWorkingDirectory=src/Cli
 
-Для більш зрозумілого виводу
-# 7. Встановлення генератора звітів (одноразово)
-dotnet new tool-manifest --force
-dotnet tool install dotnet-reportgenerator-globaltool
+# 5. Перевизначення шляху через змінну середовища (CMD)
+set "CROSSAPP_DATA_PATH=C:\temp\custom_data"
+dotnet run --project src/Cli
+set "CROSSAPP_DATA_PATH="
 
-# 8. Генерація та перегляд звіту (19.8% Core)
-dotnet tool run reportgenerator -reports:"tests/**/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:TextSummary
-type coveragereport\Summary.txt
+# 5.1. Перевизначення шляху через змінну середовища (PowerShell)
+$env:CROSSAPP_DATA_PATH = "C:\temp\custom_data"
+dotnet run --project src/Cli
+Remove-Item Env:\CROSSAPP_DATA_PATH
+
+# 6. Перевірка статусу Git (чистий репозиторій без secrets.json)
+git status

@@ -1,79 +1,38 @@
-﻿using Core;
-using Core.Dto;
-using Core.Import;
-using Core.Domain;
-using Core.Abstractions;
-using Core.Storage;
-using Core.Services;
-using Core.Events;
-using Cli;
-using Core.Reports;
+﻿using System.Reflection;
+using Core.Configuration;
+using Microsoft.Extensions.Configuration;
 
 Console.WriteLine("BookKing - практикум з крос-платформного програмування");
 Console.WriteLine("Студентка: Гулай Ірина Костянтинівна, ФЕІ-34");
 Console.WriteLine("Предметна область: Бібліотека (книги, примірники, читачі, видачі)");
 Console.WriteLine(new string('-', 52));
 
-var timeoutSeconds = 8;
-var timeoutArgIndex = Array.IndexOf(args, "--timeout");
-if (timeoutArgIndex != -1 && timeoutArgIndex + 1 < args.Length && int.TryParse(args[timeoutArgIndex + 1], out var parsedSeconds))
-{
-    timeoutSeconds = parsedSeconds;
-}
+var envName = Environment.GetEnvironmentVariable("CROSSAPP_ENVIRONMENT") ?? "Development";
 
-var dataPath = args.Where((arg, index) => !arg.StartsWith("--") && (timeoutArgIndex == -1 || index != timeoutArgIndex + 1))
-                   .FirstOrDefault() ?? "data/sample.json";
+var config = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .AddJsonFile($"appsettings.{envName}.json", optional: true)
+    .AddUserSecrets(Assembly.GetExecutingAssembly(), optional: true)
+    .AddEnvironmentVariables(prefix: "CROSSAPP_")
+    .AddCommandLine(args)
+    .Build();
 
-var timeoutDuration = TimeSpan.FromSeconds(timeoutSeconds);
-using var userCts = new CancellationTokenSource();
-Console.CancelKeyPress += (_, e) =>
+var options = config.Get<AppOptions>() ?? new AppOptions();
+
+// Підтримка окремої змінної середовища CROSSAPP_DATA_PATH
+var legacy = Environment.GetEnvironmentVariable("CROSSAPP_DATA_PATH");
+var storage = new StorageOptions
 {
-    e.Cancel = true;
-    userCts.Cancel();
+    DataPath = string.IsNullOrWhiteSpace(legacy) ? options.Storage.DataPath : legacy,
+    FileName = options.Storage.FileName
 };
 
-using var timeoutCts = new CancellationTokenSource(timeoutDuration);
-using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(userCts.Token, timeoutCts.Token);
+// Отримуємо готовий абсолютний шлях до файлу (замість старого захардкодженого)
+var dataPath = storage.ResolveFullPath(AppContext.BaseDirectory);
 
-
-var store = new InMemoryBookStore(); 
-var service = new LendingService(store);
-
-// Додаткове 8.3
-var progress = new Progress<double>(percentage =>
-{
-    var barLength = 20;
-    var filled = (int)Math.Round(barLength * (percentage / 100.0));
-    var bar = new string('#', filled) + new string('-', Math.Max(0, barLength - filled));
-
-    Console.Write($"\r[Прогрес]: [{bar}] {percentage,5:F1}%");
-});
-
-try
-{
-    Console.WriteLine($"Початок імпорту з {dataPath}...");
-    var added = await service.ImportAsync(new JsonCatalogImporter(), dataPath, linkedCts.Token, progress);
-    Console.WriteLine($"\nІмпортовано записів: {added}");
-}
-catch (OperationCanceledException)
-{
-    if (timeoutCts.IsCancellationRequested)
-    {
-        Console.WriteLine($"\n[Таймаут]: Час очікування операції вичерпано (Timeout {timeoutDuration.TotalSeconds:F0}s).");
-    }
-    else
-    {
-        Console.WriteLine("\n[Скасовано]: Імпорт перервано користувачем (Ctrl+C).");
-    }
-}
-catch (DomainException ex)
-{
-    Console.WriteLine($"Дані відхилено: {ex.Message}");
-}
-catch (FileNotFoundException)
-{
-    Console.WriteLine($"Файл не знайдено: {dataPath}");
-}
-
-
-return 0;
+// Робота з секретом
+var apiKey = config["Integration:ApiKey"];
+Console.WriteLine($"Файл даних: {dataPath}");
+Console.WriteLine(apiKey is null ? "ApiKey: не заданий" : $"ApiKey: присутній, довжина {apiKey.Length}");
+Console.WriteLine($"Термін позичання (LoanDays): {options.Library.LoanDays} дн.");

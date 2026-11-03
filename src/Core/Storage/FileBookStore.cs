@@ -1,12 +1,19 @@
 using System.Text.Json;
 using Core.Abstractions;
 using Core.Domain;
+using System.Text.Encodings.Web;
 
 namespace Core.Storage;
 
 public sealed class FileBookStore(string path) : IBookStore
 {
-    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Options = new() 
+    { 
+	WriteIndented = true,
+   	PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+   	Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     private readonly Dictionary<string, Book> _cache = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _path = Path.GetFullPath(path);
     private bool _loaded;
@@ -41,17 +48,19 @@ public sealed class FileBookStore(string path) : IBookStore
 
     private void Flush()
     {
-        var dir = Path.GetDirectoryName(_path);
+        var records = _cache.Values
+            .Select(b => new StoredBook(b.Id, b.Isbn, b.Title, b.Year, b.Author, b.AvailableCopies))
+            .ToList();
+
+	var tmp = _path + ".tmp";
+	var dir = Path.GetDirectoryName(_path);
         if (!string.IsNullOrEmpty(dir))
         {
             Directory.CreateDirectory(dir);
         }
 
-        var records = _cache.Values
-            .Select(b => new StoredBook(b.Id, b.Isbn, b.Title, b.Year, b.Author, b.AvailableCopies))
-            .ToList();
-
         File.WriteAllText(_path, JsonSerializer.Serialize(records, Options));
+	File.Move(tmp, _path, overwrite: true);
     }
 
     public IReadOnlyList<Book> List()
