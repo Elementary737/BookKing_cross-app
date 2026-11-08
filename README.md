@@ -56,7 +56,7 @@ BookKing/
 ├── src/
 │   ├── Core/
 │   │   ├── Core.csproj
-│   │   ├── DomainException.cs      # Доменні винятки валідації даних (Лабораторна 8)
+│   │   ├── DomainException.cs      # Доменні винятки валідації даних та бізнес-правил
 │   │   ├── EnvironmentInfo.cs
 │   │   ├── SampleData.cs           # Початковий набір зразкових книг
 │   │   ├── INotificationSink.cs    # Контракт каналу сповіщень (Лабораторна 6)
@@ -103,6 +103,14 @@ BookKing/
 │   │       ├── BookJsonImporter.cs
 │   │       └── MixedCsvImporter.cs
 │   │
+│   ├── Api/
+│   │   ├── Api.csproj              # Веб-проєкт (Minimal API)
+│   │   ├── Program.cs              # Конфігурація конвеєра, OpenAPI, ExceptionHandler, FluentValidation
+│   │   ├── Contracts/              # DTO та моделі запитів (BookDtos, PagedResult)
+│   │   ├── Endpoints/              # Маршрутизація та ендпоінти (BookEndpoints)
+│   │   ├── Validation/             # Фільтри валідації запитів (ValidationFilter)
+│   │   └── Infrastructure/         # Глобальні обробники помилок (DomainExceptionHandler -> 409 Conflict)
+│   │
 │   └── Cli/
 │       ├── Cli.csproj              # UserSecretsId, копіювання appsettings*.json
 │       ├── appsettings.json        # Базова конфігурація (сховище, ліміти, логування)
@@ -111,37 +119,50 @@ BookKing/
 │       └── Program.cs              # Багаторівнева конфігурація, User Secrets, CWD-імунітет
 │
 └── tests/
-    └── Core.Tests/
-        ├── Core.Tests.csproj
-        └── ImportTests.cs          # Юніт-тести потокового імпорту, таймауту, CancellationToken та прогресу
+    ├── Core.Tests/
+    │   ├── Core.Tests.csproj       # Юніт-тести потокового імпорту, таймауту, CancellationToken та прогресу
+    │   └── ImportTests.cs
+    │
+    └── Api.Tests/
+        ├── Api.Tests.csproj        # Інтеграційні тести API (WebApplicationFactory, Mvc.Testing)
+        └── BookApiIntegrationTests.cs
 ```
 
-# 1. Налаштування та перевірка секретів (User Secrets)
-dotnet user-secrets set "Integration:ApiKey" "local-dev-key" --project src/Cli
-dotnet user-secrets list --project src/Cli
+:: ЧАСТИНА 1: ОСНОВНІ ЗАВДАННЯ
 
-# 2. Перевірка відсутності захардкодscope-шляхів
-git grep "C:" src/
-git grep "/home/" src/
-git grep -F "\\" src/
-
-# 3. Збірка та тестування
+:: 1. Збірка всього рішення
 dotnet build
+
+:: 2. Запуск вебсерверу API
+dotnet run --project src/Api --urls http://localhost:5080
+
+:: 3. Отримання повного списку всіх книг (Основний GET)
+curl -i "http://localhost:5080/api/books"
+
+:: 4. Створення нової книги в каталозі (Основний POST)
+curl -i -X POST http://localhost:5080/api/books -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"Кобзар\",\"author\":\"Тарас Шевченко\",\"year\":1840,\"copies\":5}"
+
+:: 5. Отримання детальної інформації про книгу за її ID (Основний GET за ідентифікатором)
+:: (Замініть {id} на реальний ID, отриманий при створенні)
+curl -i "http://localhost:5080/api/books/{id}"
+
+:: 6. Оновлення існуючої книги (Основний PUT)
+curl -i -X PUT http://localhost:5080/api/books/{id} -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"Кобзар (Оновлене видання)\",\"author\":\"Тарас Шевченко\",\"year\":1840,\"copies\":10}"
+
+:: 7. Видалення книги за ID (Основний DELETE)
+curl -i -X DELETE http://localhost:5080/api/books/{id}
+
+:: ЧАСТИНА 2: ДОДАТКОВІ ЗАВДАННЯ
+
+:: Додаткове 1: Пагінація та фільтрація списку книг за сторінками та автором
+curl -i "http://localhost:5080/api/books?page=1&pageSize=5&author=Шевченко"
+
+:: Додаткове 2: Перевірка валідації (FluentValidation + EndpointFilter — відправляємо пусту назву та невірні роки/копії, очікується 400 Bad Request)
+curl -X POST http://localhost:5080/api/books -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"\",\"author\":\"Тарас Шевченко\",\"year\":1100,\"copies\":-1}" | python -m json.tool
+
+:: Додаткове 3: Перевірка доменних винятків (DomainExceptionHandler -> очікується 409 Conflict)
+:: Повторна спроба додати книгу з тим самим ISBN, яка вже є в базі:
+curl -i -X POST http://localhost:5080/api/books -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"Кобзар\",\"author\":\"Тарас Шевченко\",\"year\":1840,\"copies\":5}"
+
+:: Додаткове 4: Запуск усіх тестів рішення (Юніт-тести Core.Tests + Інтеграційні тести Api.Tests)
 dotnet test
-
-# 4. Демонстрація переносимості (CWD-імунітет)
-dotnet run --project src/Cli
-dotnet run --project src/Cli --property:RunWorkingDirectory=src/Cli
-
-# 5. Перевизначення шляху через змінну середовища (CMD)
-set "CROSSAPP_DATA_PATH=C:\temp\custom_data"
-dotnet run --project src/Cli
-set "CROSSAPP_DATA_PATH="
-
-# 5.1. Перевизначення шляху через змінну середовища (PowerShell)
-$env:CROSSAPP_DATA_PATH = "C:\temp\custom_data"
-dotnet run --project src/Cli
-Remove-Item Env:\CROSSAPP_DATA_PATH
-
-# 6. Перевірка статусу Git (чистий репозиторій без secrets.json)
-git status
