@@ -1,0 +1,53 @@
+@hostname = localhost
+@port = 5080
+@host = http://{{hostname}}:{{port}}
+
+### 1. Створення книги (POST 201)
+# @name createBook
+POST {{host}}/api/books
+Content-Type: application/json
+
+{
+  "isbn": "978-617-7866-10-6",
+  "title": "Кобзар",
+  "author": "Тарас Шевченко",
+  "year": 1840,
+  "copies": 5
+}
+
+### 2. Валідація помилок (POST 400)
+POST {{host}}/api/books
+Content-Type: application/json
+
+{
+  "isbn": "",
+  "title": "",
+  "author": "",
+  "year": 2500,
+  "copies": -3
+}
+
+### 3. Отримання списку книг
+GET {{host}}/api/books
+
+### 4. Отримання книги за ID
+@createdId = {{createBook.response.body.id}}
+GET {{host}}/api/books/{{createdId}}
+
+### 5. Оновлення книги (PUT 200)
+PUT {{host}}/api/books/{{createdId}}
+Content-Type: application/json
+
+{
+  "isbn": "978-617-7866-10-6",
+  "title": "Кобзар (Видання 2-ге)",
+  "author": "Тарас Шевченко",
+  "year": 1840,
+  "copies": 10
+}
+
+### 6. Видалення книги (DELETE 204)
+DELETE {{host}}/api/books/{{createdId}}
+
+### 7. Перевірка 404 після видалення
+GET {{host}}/api/books/{{createdId}}
