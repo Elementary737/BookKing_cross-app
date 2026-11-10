@@ -1,32 +1,39 @@
 using Api.Endpoints;
 using Core.Abstractions;
-using Core.Storage;
-using Scalar.AspNetCore;
-using Api.Contracts;
-using FluentValidation;
-using Api.Infrastructure;
+using Infrastructure;
+using Infrastructure.Persistence;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
-builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<DomainExceptionHandler>();
-builder.Services.AddSingleton<IBookStore, InMemoryBookStore>();
-builder.Services.AddValidatorsFromAssemblyContaining<SaveBookRequestValidator>();
+// Налаштування рядка підключення та бази даних SQLite
+var raw = builder.Configuration.GetConnectionString("AppDb") ?? "Data Source=data/app.db";
+var csb = new SqliteConnectionStringBuilder(raw);
+
+if (!Path.IsPathRooted(csb.DataSource))
+{
+    var full = Path.Combine(builder.Environment.ContentRootPath, csb.DataSource);
+    Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+    csb.DataSource = full;
+}
+
+// Реєстрація DbContext та сховища у DI-контейнері
+builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(csb.ConnectionString));
+builder.Services.AddScoped<IBookStore, EfCatalogStore>();
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
-app.UseStatusCodePages();
-
-if (app.Environment.IsDevelopment())
+// Автоматичне застосування міграцій у режимі розробки
+using (var scope = app.Services.CreateScope())
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference();
+    if (app.Environment.IsDevelopment())
+    {
+        scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
+    }
 }
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+// Реєструємо маршрути Minimal API
 app.MapBookEndpoints();
 
 app.Run();
-public partial class Program { }

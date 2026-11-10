@@ -103,13 +103,27 @@ BookKing/
 │   │       ├── BookJsonImporter.cs
 │   │       └── MixedCsvImporter.cs
 │   │
+│   ├── Infrastructure/
+│   │   ├── Infrastructure.csproj   # EF Core, Microsoft.EntityFrameworkCore.Sqlite
+│   │   │
+│   │   ├── Persistence/
+│   │   │   ├── AppDbContext.cs     # Контекст бази даних EF Core, Fluent API (BookRow, CopyRow)
+│   │   │   └── EfCatalogStore.cs   # Реалізація IBookStore через EF Core
+│   │   │
+│   │   └── Migrations/             # Згенеровані EF Core міграції схеми БД
+│   │       ├── 20261110_InitialCreate.cs
+│   │       └── AppDbContextModelSnapshot.cs
+│   │
 │   ├── Api/
 │   │   ├── Api.csproj              # Веб-проєкт (Minimal API)
-│   │   ├── Program.cs              # Конфігурація конвеєра, OpenAPI, ExceptionHandler, FluentValidation
+│   │   ├── Program.cs              # Конфігурація SQLite ConnectionString, реєстрація EfCatalogStore, автоміграції
+│   │   ├── Api.http                # Шаблони HTTP-запитів для тестування ендпоінтів
 │   │   ├── Contracts/              # DTO та моделі запитів (BookDtos, PagedResult)
-│   │   ├── Endpoints/              # Маршрутизація та ендпоінти (BookEndpoints)
+│   │   ├── Endpoints/              # Маршрутизація та ендпоінти Minimal API (BookEndpoints)
 │   │   ├── Validation/             # Фільтри валідації запитів (ValidationFilter)
-│   │   └── Infrastructure/         # Глобальні обробники помилок (DomainExceptionHandler -> 409 Conflict)
+│   │   ├── Infrastructure/         # Глобальні обробники помилок (DomainExceptionHandler -> 409 Conflict)
+│   │   └── data/
+│   │       └── app.db              # Локальна база даних SQLite (ігнорується в Git)
 │   │
 │   └── Cli/
 │       ├── Cli.csproj              # UserSecretsId, копіювання appsettings*.json
@@ -128,41 +142,155 @@ BookKing/
         └── BookApiIntegrationTests.cs
 ```
 
-:: ЧАСТИНА 1: ОСНОВНІ ЗАВДАННЯ
+🛠️ 1. Попередні вимоги (Prerequisites)
 
-:: 1. Збірка всього рішення
+Перед початком роботи переконайся, що в системі встановлено необхідний інструментарій:
+
+.NET 8.0 SDK (або новіша версія):
+
+dotnet --version
+
+
+Global tool dotnet-ef (для керування міграціями EF Core):
+
+dotnet tool install --global dotnet-ef
+
+
+CLI-утиліта sqlite3 (для прямих запитів до бази даних):
+
+winget install SQLite.SQLite
+
+
+🏗️ 2. Збірка та запуск проєкту (Build & Run)
+
+Крок 1. Збірка всього рішення
+
+У кореневій папці проєкту BookKing виконати:
+
 dotnet build
 
-:: 2. Запуск вебсерверу API
-dotnet run --project src/Api --urls http://localhost:5080
 
-:: 3. Отримання повного списку всіх книг (Основний GET)
+Крок 2. Запуск Web API
+
+dotnet run --project src/Api
+
+
+Після успішного запуску в консолі з'явиться повідомлення про те, що сервер слухає порт (за замовчуванням http://localhost:5080):
+
+info: Microsoft.Hosting.Lifetime[14]
+
+Now listening on: http://localhost:5080
+
+Зверни увагу: При першому запуску застосунок автоматично створить локальний файл бази даних SQLite за шляхом src/Api/data/app.db та застосує всі наявні міграції.
+
+🗄️ 3. Керування міграціями (EF Core + SQLite)
+
+Міграції фіксують зміни доменної моделі в C# та оновлюють схему бази даних SQLite.
+
+Створення нової міграції (виконується після зміни entity-класів або AppDbContext):
+
+dotnet ef migrations add <НазваМіграції> --project src/Infrastructure --startup-project src/Api
+
+
+Застосування міграцій до бази даних вручну:
+
+dotnet ef database update --project src/Infrastructure --startup-project src/Api
+
+
+Видалення останньої незастосованої міграції:
+
+dotnet ef migrations remove --project src/Infrastructure --startup-project src/Api
+
+
+🧪 4. Тестування API ендпоінтів
+
+Для тестування Minimal API можна використовувати файл src/Api/Api.http або інструмент curl у терміналі.
+
+1. Додавання книги (POST):
+
+curl -i -X POST "http://localhost:5080/api/books" -H "Content-Type: application/json" -d "{\"isbn\":\"978-0131103627\",\"title\":\"The C Programming Language\",\"year\":1988,\"author\":\"Brian W. Kernighan\",\"copies\":3}"
+
+
+У разі успіху сервер поверне відповідь HTTP/1.1 201 Created із згенерованим id.
+
+2. Отримання списку книг (GET):
+
 curl -i "http://localhost:5080/api/books"
 
-:: 4. Створення нової книги в каталозі (Основний POST)
-curl -i -X POST http://localhost:5080/api/books -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"Кобзар\",\"author\":\"Тарас Шевченко\",\"year\":1840,\"copies\":5}"
 
-:: 5. Отримання детальної інформації про книгу за її ID (Основний GET за ідентифікатором)
-:: (Замініть {id} на реальний ID, отриманий при створенні)
-curl -i "http://localhost:5080/api/books/{id}"
+3. Отримання книги за ID (GET):
 
-:: 6. Оновлення існуючої книги (Основний PUT)
-curl -i -X PUT http://localhost:5080/api/books/{id} -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"Кобзар (Оновлене видання)\",\"author\":\"Тарас Шевченко\",\"year\":1840,\"copies\":10}"
+curl -i "http://localhost:5080/api/books/<id_книги>"
 
-:: 7. Видалення книги за ID (Основний DELETE)
-curl -i -X DELETE http://localhost:5080/api/books/{id}
 
-:: ЧАСТИНА 2: ДОДАТКОВІ ЗАВДАННЯ
+4. Оновлення книги (PUT):
 
-:: Додаткове 1: Пагінація та фільтрація списку книг за сторінками та автором
-curl -i "http://localhost:5080/api/books?page=1&pageSize=5&author=Шевченко"
+curl -i -X PUT "http://localhost:5080/api/books/<id_книги>" -H "Content-Type: application/json" -d "{\"isbn\":\"978-0131103627\",\"title\":\"The C Programming Language (2nd Edition)\",\"year\":1988,\"author\":\"Brian W. Kernighan\",\"copies\":5}"
 
-:: Додаткове 2: Перевірка валідації (FluentValidation + EndpointFilter — відправляємо пусту назву та невірні роки/копії, очікується 400 Bad Request)
-curl -X POST http://localhost:5080/api/books -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"\",\"author\":\"Тарас Шевченко\",\"year\":1100,\"copies\":-1}" | python -m json.tool
 
-:: Додаткове 3: Перевірка доменних винятків (DomainExceptionHandler -> очікується 409 Conflict)
-:: Повторна спроба додати книгу з тим самим ISBN, яка вже є в базі:
-curl -i -X POST http://localhost:5080/api/books -H "Content-Type: application/json" -d "{\"isbn\":\"978-617-7866-10-6\",\"title\":\"Кобзар\",\"author\":\"Тарас Шевченко\",\"year\":1840,\"copies\":5}"
+5. Видалення книги (DELETE):
 
-:: Додаткове 4: Запуск усіх тестів рішення (Юніт-тести Core.Tests + Інтеграційні тести Api.Tests)
-dotnet test
+curl -i -X DELETE "http://localhost:5080/api/books/<id_книги>"
+
+
+🔍 5. Перевірка персистентності у базі даних SQLite
+
+Для підтвердження збереження даних у локальній БД src/Api/data/app.db після перезапуску сервера використовуються CLI-команди sqlite3:
+
+Перегляд усіх записів у таблиці Books:
+
+sqlite3 -header -column src\Api\data\app.db "SELECT * FROM Books;"
+
+
+Перегляд історії застосованих міграцій:
+
+sqlite3 -header -column src\Api\data\app.db "SELECT * FROM __EFMigrationsHistory;"
+
+
+Інтерактивний режим SQLite (CLI):
+
+Вхід в інтерактивний режим:
+
+sqlite3 src\Api\data\app.db
+
+
+Корисні системні команди (починаються з крапки .)
+
+.tables — відобразити всі таблиці в базі даних.
+
+.schema Books — показати структуру таблиці Books (колонки та типи).
+
+.headers on — увімкнути вивід заголовків колонок.
+
+.mode column — увімкнути гарне форматування виводу у вигляді таблиці.
+
+.exit — вийти з інтерактивного режиму.
+
+Приклади SQL-запитів в інтерактивному режимі:
+
+Важливо: Усі SQL-запити обов'язково мають закінчуватися крапкою з комою ;!
+
+Отримати всі книги:
+
+SELECT * FROM Books;
+
+
+Додати нову книгу вручну:
+
+INSERT INTO Books (Id, Isbn, Title, Author, Year, AvailableCopies) 
+VALUES ('m1', '978-0000000000', 'Тестова книга', 'Автор', 2026, 5);
+
+
+Оновити кількість примірників:
+
+UPDATE Books SET AvailableCopies = 10 WHERE Id = 'm1';
+
+
+Видалити книгу:
+
+DELETE FROM Books WHERE Id = 'm1';
+
+
+⚠️ Як вийти, якщо консоль зависла в стані ...> або ;->:
+
+Якщо ви забули поставити ; в кінці SQL-запиту, консоль буде чекати продовження. Натисніть Ctrl + C, щоб скасувати поточне введення, після чого введіть .exit і натисніть Enter.
