@@ -1,0 +1,71 @@
+@page "/books"
+@rendermode InteractiveServer
+@using Web.Contracts
+@using Web.Services
+@inject BooksApiClient Api
+
+<h3>Каталог бібліотеки</h3>
+
+<div class="mb-3">
+    <a class="btn btn-primary" href="/books/new">Додати видання</a>
+</div>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else if (items is null)
+{
+    <p><em>Завантаження каталогу...</em></p>
+}
+else if (items.Count == 0)
+{
+    <p>Видань у бібліотеці ще немає.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>ISBN</th>
+                <th>Назва</th>
+                <th>Автор</th>
+                <th>Рік</th>
+                <th>Примірників</th>
+                <th>Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in items)
+            {
+                <tr>
+                    <td>@item.Isbn</td>
+                    <td>@item.Title</td>
+                    <td>@item.Author</td>
+                    <td>@item.Year</td>
+                    <td>@item.Copies</td>
+                    <td>
+                        <a class="btn btn-sm btn-outline-secondary" href="@($"/books/{item.Id}")">Редагувати</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<BookModel>? items;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            items = await Api.ListAsync();
+        }
+        catch (HttpRequestException)
+        {
+            error = "Api недоступний. Перевірте, чи запущено сервер.";
+        }
+    }
+}

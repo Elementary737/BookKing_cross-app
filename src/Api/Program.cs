@@ -18,6 +18,16 @@ if (!Path.IsPathRooted(csb.DataSource))
     csb.DataSource = full;
 }
 
+var webOrigin = builder.Configuration["Cors:WebOrigin"] ?? "http://localhost:5090";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("web", policy =>
+        policy.WithOrigins(webOrigin)
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
 // Реєстрація DbContext та сховища у DI-контейнері
 builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(csb.ConnectionString));
 builder.Services.AddScoped<IBookStore, EfCatalogStore>();
@@ -33,6 +43,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+app.UseCors("web");
 // Реєструємо маршрути Minimal API
 app.MapBookEndpoints();
 

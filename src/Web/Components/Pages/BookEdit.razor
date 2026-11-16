@@ -1,0 +1,146 @@
+@page "/books/new"
+@page "/books/{Id}"
+@rendermode InteractiveServer
+@using Web.Contracts
+@using Web.Services
+@inject BooksApiClient Api
+@inject NavigationManager Nav
+
+<h3>@(IsNew ? "Нове видання" : "Редагування видання")</h3>
+
+@if (loadError is not null)
+{
+    <div class="alert alert-danger">@loadError</div>
+    <a class="btn btn-secondary" href="/books">Повернутися до списку</a>
+}
+else if (model is null)
+{
+    <p><em>Завантаження даних...</em></p>
+}
+else
+{
+    @if (submitError is not null)
+    {
+        <div class="alert alert-danger">@submitError</div>
+    }
+
+    <EditForm Model="model" OnValidSubmit="SaveAsync" FormName="BookForm">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label">ISBN</label>
+            <InputText class="form-control" @bind-Value="model.Isbn" />
+            <ValidationMessage For="@(() => model.Isbn)" />
+            @RenderServerErrors(nameof(model.Isbn))
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Назва</label>
+            <InputText class="form-control" @bind-Value="model.Title" />
+            <ValidationMessage For="@(() => model.Title)" />
+            @RenderServerErrors(nameof(model.Title))
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Автор</label>
+            <InputText class="form-control" @bind-Value="model.Author" />
+            <ValidationMessage For="@(() => model.Author)" />
+            @RenderServerErrors(nameof(model.Author))
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Рік видання</label>
+            <InputNumber class="form-control" @bind-Value="model.Year" />
+            <ValidationMessage For="@(() => model.Year)" />
+            @RenderServerErrors(nameof(model.Year))
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Кількість примірників</label>
+            <InputNumber class="form-control" @bind-Value="model.Copies" />
+            <ValidationMessage For="@(() => model.Copies)" />
+            @RenderServerErrors(nameof(model.Copies))
+        </div>
+
+        <button type="submit" class="btn btn-success" disabled="@isSaving">Зберегти</button>
+        <a class="btn btn-secondary ms-2" href="/books">Скасувати</a>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    private bool IsNew => string.IsNullOrWhiteSpace(Id);
+    private BookModel? model;
+    private string? loadError;
+    private string? submitError;
+    private Dictionary<string, string[]>? serverErrors;
+    private bool isSaving;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loadError = null;
+        submitError = null;
+        serverErrors = null;
+
+        if (IsNew)
+        {
+            model = new BookModel();
+            return;
+        }
+
+        try
+        {
+            model = await Api.FindAsync(Id!);
+            if (model is null)
+            {
+                loadError = "Видання з таким ідентифікатором не знайдено (404).";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            loadError = "Api недоступний. Перевірте, чи запущено сервер.";
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (model is null) return;
+
+        isSaving = true;
+        submitError = null;
+        serverErrors = null;
+
+        var result = IsNew
+            ? await Api.CreateAsync(model)
+            : await Api.UpdateAsync(model);
+
+        isSaving = false;
+
+        if (result.Ok)
+        {
+            Nav.NavigateTo("/books");
+            return;
+        }
+
+        submitError = result.Message;
+        serverErrors = result.Errors;
+    }
+
+    private RenderFragment RenderServerErrors(string fieldName) => builder =>
+    {
+        if (serverErrors is null) return;
+
+        var key = serverErrors.Keys.FirstOrDefault(k => k.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+        if (key is null) return;
+
+        foreach (var err in serverErrors[key])
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "text-danger small");
+            builder.AddContent(2, err);
+            builder.CloseElement();
+        }
+    };
+}
