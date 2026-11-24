@@ -1,14 +1,26 @@
 using System.Net;
 using System.Net.Http.Json;
-using Web.Contracts;
+using Contracts;
 
 namespace Web.Services;
 
 public sealed class BooksApiClient(HttpClient http)
 {
-    public async Task<List<BookModel>> ListAsync(CancellationToken ct = default)
+    public async Task<List<BookModel>> ListAsync(string? author = null, string? sortBy = null, CancellationToken ct = default)
     {
-        var page = await http.GetFromJsonAsync<BooksPageResponse>("api/books", ct);
+        var queryParams = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(author))
+            queryParams.Add($"author={Uri.EscapeDataString(author)}");
+
+        if (!string.IsNullOrWhiteSpace(sortBy))
+            queryParams.Add($"sortBy={Uri.EscapeDataString(sortBy)}");
+
+        var url = queryParams.Count > 0
+            ? $"api/books?{string.Join("&", queryParams)}"
+            : "api/books";
+
+        var page = await http.GetFromJsonAsync<PagedResult<BookModel>>(url, ct);
         return page?.Items ?? [];
     }
 
@@ -31,6 +43,26 @@ public sealed class BooksApiClient(HttpClient http)
     public Task<ApiResult> UpdateAsync(BookModel model, CancellationToken ct = default)
     {
         return SendAsync(HttpMethod.Put, $"api/books/{model.Id}", model, ct);
+    }
+
+// [Додаткове 1] Надсилання DELETE-запиту на сервер
+    public async Task<ApiResult> DeleteAsync(string id, CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await http.DeleteAsync($"api/books/{id}", ct);
+            if (response.IsSuccessStatusCode)
+                return new ApiResult(true);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return new ApiResult(false, "Видання не знайдено — можливо, його вже видалили.");
+
+            return new ApiResult(false, $"Помилка видалення: {(int)response.StatusCode}.");
+        }
+        catch (HttpRequestException)
+        {
+            return new ApiResult(false, "Api недоступний. Перевірте, чи запущено src/Api.");
+        }
     }
 
     private async Task<ApiResult> SendAsync(HttpMethod method, string url, BookModel model, CancellationToken ct)

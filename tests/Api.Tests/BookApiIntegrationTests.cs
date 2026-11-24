@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using Api.Contracts;
+using Contracts;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Api.Tests;

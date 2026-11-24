@@ -1,7 +1,7 @@
 @page "/books/new"
 @page "/books/{Id}"
 @rendermode InteractiveServer
-@using Web.Contracts
+@using Contracts
 @using Web.Services
 @inject BooksApiClient Api
 @inject NavigationManager Nav
@@ -29,35 +29,35 @@ else
 
         <div class="mb-3">
             <label class="form-label">ISBN</label>
-            <InputText class="form-control" @bind-Value="model.Isbn" />
+            <InputText class="form-control" @bind-Value="model.Isbn" @bind-Value:after="() => ClearFieldError(nameof(model.Isbn))" />
             <ValidationMessage For="@(() => model.Isbn)" />
             @RenderServerErrors(nameof(model.Isbn))
         </div>
 
         <div class="mb-3">
             <label class="form-label">Назва</label>
-            <InputText class="form-control" @bind-Value="model.Title" />
+            <InputText class="form-control" @bind-Value="model.Title" @bind-Value:after="() => ClearFieldError(nameof(model.Title))" />
             <ValidationMessage For="@(() => model.Title)" />
             @RenderServerErrors(nameof(model.Title))
         </div>
 
         <div class="mb-3">
             <label class="form-label">Автор</label>
-            <InputText class="form-control" @bind-Value="model.Author" />
+            <InputText class="form-control" @bind-Value="model.Author" @bind-Value:after="() => ClearFieldError(nameof(model.Author))" />
             <ValidationMessage For="@(() => model.Author)" />
             @RenderServerErrors(nameof(model.Author))
         </div>
 
         <div class="mb-3">
             <label class="form-label">Рік видання</label>
-            <InputNumber class="form-control" @bind-Value="model.Year" />
+            <InputNumber class="form-control" @bind-Value="model.Year" @bind-Value:after="() => ClearFieldError(nameof(model.Year))" />
             <ValidationMessage For="@(() => model.Year)" />
             @RenderServerErrors(nameof(model.Year))
         </div>
 
         <div class="mb-3">
             <label class="form-label">Кількість примірників</label>
-            <InputNumber class="form-control" @bind-Value="model.Copies" />
+            <InputNumber class="form-control" @bind-Value="model.Copies" @bind-Value:after="() => ClearFieldError(nameof(model.Copies))" />
             <ValidationMessage For="@(() => model.Copies)" />
             @RenderServerErrors(nameof(model.Copies))
         </div>
@@ -143,4 +143,20 @@ else
             builder.CloseElement();
         }
     };
+    private void ClearFieldError(string fieldName)
+    {
+        if (serverErrors is null) return;
+
+        var key = serverErrors.Keys.FirstOrDefault(k => k.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+        if (key is not null)
+        {
+            serverErrors.Remove(key);
+        }
+
+        if (serverErrors.Count == 0)
+        {
+            serverErrors = null;
+            submitError = null;
+        }
+    }
 }

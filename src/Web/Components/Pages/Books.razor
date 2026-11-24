@@ -1,13 +1,31 @@
 @page "/books"
 @rendermode InteractiveServer
-@using Web.Contracts
+@using Contracts
 @using Web.Services
 @inject BooksApiClient Api
+@implements IDisposable
 
 <h3>Каталог бібліотеки</h3>
 
-<div class="mb-3">
-    <a class="btn btn-primary" href="/books/new">Додати видання</a>
+<div class="row g-2 mb-3 align-items-center">
+    <div class="col-auto">
+        <a class="btn btn-primary" href="/books/new">Додати видання</a>
+    </div>
+    <div class="col-md-4">
+        <input class="form-control"
+               placeholder="Пошук за автором..."
+               @bind="searchAuthor"
+               @bind:event="oninput"
+               @bind:after="LoadBooksAsync" />
+    </div>
+    <div class="col-md-3">
+        <select class="form-select" @bind="sortBy" @bind:after="LoadBooksAsync">
+            <option value="">Сортування за замовчуванням</option>
+            <option value="title">За назвою</option>
+            <option value="author">За автором</option>
+            <option value="copies">За кількістю примірників</option>
+        </select>
+    </div>
 </div>
 
 @if (error is not null)
@@ -46,6 +64,15 @@ else
                     <td>@item.Copies</td>
                     <td>
                         <a class="btn btn-sm btn-outline-secondary" href="@($"/books/{item.Id}")">Редагувати</a>
+@if (confirmDeleteId == item.Id)
+{
+    <button class="btn btn-sm btn-danger ms-1" @onclick="() => ConfirmDeleteAsync(item.Id)">Підтвердити</button>
+    <button class="btn btn-sm btn-secondary ms-1" @onclick="() => confirmDeleteId = null">Скасувати</button>
+}
+else
+{
+    <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => confirmDeleteId = item.Id">Видалити</button>
+}
                     </td>
                 </tr>
             }
@@ -56,16 +83,55 @@ else
 @code {
     private List<BookModel>? items;
     private string? error;
+    private string? searchAuthor;
+    private string? sortBy;
+    private string? confirmDeleteId;
+    private CancellationTokenSource? cts;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadBooksAsync();
+    }
+
+    private async Task LoadBooksAsync()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+
         try
         {
-            items = await Api.ListAsync();
+            error = null;
+            items = await Api.ListAsync(searchAuthor, sortBy, token);
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (HttpRequestException)
         {
             error = "Api недоступний. Перевірте, чи запущено сервер.";
         }
+    }
+
+    private async Task ConfirmDeleteAsync(string id)
+    {
+        var result = await Api.DeleteAsync(id);
+        confirmDeleteId = null;
+
+        if (result.Ok)
+        {
+            items?.RemoveAll(b => b.Id == id);
+        }
+        else
+        {
+            error = result.Message;
+        }
+    }
+
+    public void Dispose()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
     }
 }

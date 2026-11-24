@@ -1,6 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Web.Contracts;
+namespace Contracts;
+
+public sealed record BookDto(string Id, string Isbn, string Title, string Author, int Year, int Copies);
+
+public sealed record SaveBookRequest(string Isbn, string Title, string Author, int Year, int Copies);
+
+public sealed record PagedResult<T>(List<T> Items, int Total, int Page, int PageSize);
 
 public sealed class BookModel
 {
@@ -24,8 +30,6 @@ public sealed class BookModel
     [Range(0, int.MaxValue, ErrorMessage = "Кількість примірників не може бути від'ємною")]
     public int Copies { get; set; }
 }
-
-public sealed record BooksPageResponse(List<BookModel> Items, int Total, int Page, int PageSize);
 
 public sealed record ApiResult(bool Ok, string? Message = null, Dictionary<string, string[]>? Errors = null);
 

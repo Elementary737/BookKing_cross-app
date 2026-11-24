@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using Api.Contracts;
+using Contracts;
 using Core.Abstractions;
 using Core.Domain;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -14,32 +14,46 @@ public static class BookEndpoints
     {
         var group = app.MapGroup("/api/books").WithTags("Books");
 
-        // 1. GET /api/books ( Додаткове 1 з опційною фільтрацією за автором)
-       group.MapGet("/", (int page = 1, int pageSize = 20, string? search = null, IBookStore store = null!) =>
-{
-    page = page < 1 ? 1 : page;
-    pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+        // 1. GET /api/books ( Додаткове 2 query-параметрами пошуку за автором)
+        group.MapGet("/", (int page = 1, int pageSize = 20, string? search = null, string? author = null, string? sortBy = null, IBookStore store = null!) =>
+        {
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
 
-    var query = store.List().AsEnumerable();
+            var query = store.List().AsEnumerable();
 
-    if (!string.IsNullOrWhiteSpace(search))
-    {
-        var s = search.Trim();
-        query = query.Where(b => 
-            b.Title.Contains(s, StringComparison.OrdinalIgnoreCase) ||
-            (b.Author != null && b.Author.Contains(s, StringComparison.OrdinalIgnoreCase)) ||
-            b.Isbn.Contains(s, StringComparison.OrdinalIgnoreCase));
-    }
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var s = search.Trim();
+                query = query.Where(b =>
+                    b.Title.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                    (b.Author != null && b.Author.Contains(s, StringComparison.OrdinalIgnoreCase)) ||
+                    b.Isbn.Contains(s, StringComparison.OrdinalIgnoreCase));
+            }
 
-    var total = query.Count();
-    var items = query
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .Select(b => b.ToApiDto())
-        .ToList();
+            if (!string.IsNullOrWhiteSpace(author))
+            {
+                var a = author.Trim();
+                query = query.Where(b => b.Author != null && b.Author.Contains(a, StringComparison.OrdinalIgnoreCase));
+            }
 
-    return TypedResults.Ok(new PagedResult<BookDto>(items, total, page, pageSize));
-});
+            query = sortBy switch
+            {
+                "title" => query.OrderBy(b => b.Title, StringComparer.OrdinalIgnoreCase),
+                "author" => query.OrderBy(b => b.Author, StringComparer.OrdinalIgnoreCase),
+                "copies" => query.OrderByDescending(b => b.AvailableCopies),
+                _ => query.OrderBy(b => b.Isbn)
+            };
+
+            var total = query.Count();
+            var items = query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(b => b.ToApiDto())
+                .ToList();
+
+            return TypedResults.Ok(new PagedResult<BookDto>(items, total, page, pageSize));
+        });
 
         // 2. GET /api/books/{id}
         group.MapGet("/{id}", Results<Ok<BookDto>, NotFound> (string id, IBookStore store) =>
@@ -52,7 +66,14 @@ public static class BookEndpoints
         {
             if (store.List().Any(b => b.Isbn.Equals(request.Isbn.Trim(), StringComparison.OrdinalIgnoreCase)))
     {
-        throw new DomainException("Книга з таким ISBN вже існує в каталозі.");
+        if (store.List().Any(b => b.Isbn.Equals(request.Isbn.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                app.Logger.LogWarning("400 Bad Request: Книга з ISBN {Isbn} вже існує в каталозі.", request.Isbn);
+                return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["Isbn"] = ["Книга з таким ISBN вже існує в каталозі."]
+                });
+            }
     }
             var id = Convert.ToHexString(RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
             var created = Book.Create(id, request.Isbn, request.Title, request.Year, request.Author, request.Copies);
@@ -74,7 +95,14 @@ group.MapPut("/{id}", Results<Ok<BookDto>, NotFound, ValidationProblem> (string 
     var isSameIsbn = existingBook.Isbn.Equals(request.Isbn.Trim(), StringComparison.OrdinalIgnoreCase);
     if (!isSameIsbn && store.List().Any(b => b.Isbn.Equals(request.Isbn.Trim(), StringComparison.OrdinalIgnoreCase)))
     {
-        throw new DomainException("Книга з таким ISBN вже існує в каталозі.");
+        if (!isSameIsbn && store.List().Any(b => b.Isbn.Equals(request.Isbn.Trim(), StringComparison.OrdinalIgnoreCase)))
+            {
+                app.Logger.LogWarning("400 Bad Request: Книга з ISBN {Isbn} вже існує в каталозі.", request.Isbn);
+                return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["Isbn"] = ["Книга з таким ISBN вже існує в каталозі."]
+                });
+            }
     }
 
     // Створюємо оновлений доменний об'єкт із тим самим id
