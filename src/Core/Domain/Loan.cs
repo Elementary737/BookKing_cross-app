@@ -21,12 +21,12 @@ public sealed class Loan
         ReturnedOn = returnedOn;
     }
 
-// Додаткове 4.2: Інваріант для двох сутностей: перевірка ліміту відкритих видач читача
+    // Додаткове 4.2: Інваріант для двох сутностей: перевірка ліміту відкритих видач читача
     public static Loan OpenForReader(
-        string id, 
-        Book book, 
-        string readerId, 
-        IReadOnlyList<Loan> readerActiveLoans, 
+        string id,
+        Book book,
+        string readerId,
+        IReadOnlyList<Loan> readerActiveLoans,
         DateTime issuedOn)
     {
         ArgumentNullException.ThrowIfNull(readerActiveLoans);
@@ -72,29 +72,29 @@ public sealed class Loan
             throw new ArgumentOutOfRangeException(nameof(returnedOn), returnedOn,
                 "Дата повернення не може бути раніше дати видачі");
 
-	TransitionTo(LoanStatus.Returned);
+        TransitionTo(LoanStatus.Returned);
 
         book.ReturnCopy();
         ReturnedOn = returnedOn;
     }
 
-// Додаткове 4.3
+    // Додаткове 4.3
     public void TransitionTo(LoanStatus newStatus)
     {
         bool isValid = (Status, newStatus) switch
         {
             // З Active можна перейти в Overdue, Returned або Lost
-            (LoanStatus.Active, LoanStatus.Overdue)  => true,
+            (LoanStatus.Active, LoanStatus.Overdue) => true,
             (LoanStatus.Active, LoanStatus.Returned) => true,
-            (LoanStatus.Active, LoanStatus.Lost)     => true,
+            (LoanStatus.Active, LoanStatus.Lost) => true,
 
             // З Overdue (прострочено) книгу все ще можна повернути або оголосити втраченою
             (LoanStatus.Overdue, LoanStatus.Returned) => true,
-            (LoanStatus.Overdue, LoanStatus.Lost)     => true,
+            (LoanStatus.Overdue, LoanStatus.Lost) => true,
 
             // Кінцеві стани: повернену чи втрачену книгу не можна змінювати
             (LoanStatus.Returned, _) => false,
-            (LoanStatus.Lost, _)     => false,
+            (LoanStatus.Lost, _) => false,
 
             // Перехід у той самий статус нічого не змінює
             _ when Status == newStatus => true,

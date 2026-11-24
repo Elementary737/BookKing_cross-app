@@ -42,7 +42,7 @@ public class ImportTests
             }
         }
     }
-// Додаткове 8.2
+    // Додаткове 8.2
     [Fact]
     public async Task ImportAsync_WhenTimeoutOccurs_FiresTimeoutTokenSpecifically()
     {
@@ -59,10 +59,10 @@ public class ImportTests
 
             // Токен користувача (не скасовуємо вручну)
             using var userCts = new CancellationTokenSource();
-            
+
             // Токен таймауту на дуже короткий час (50 мс, тоді як кожен запис чекає 200 мс)
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
-            
+
             // Зв'язане джерело скасування
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(userCts.Token, timeoutCts.Token);
 
@@ -87,7 +87,7 @@ public class ImportTests
             }
         }
     }
-// Додаткове 8.3
+    // Додаткове 8.3
     [Fact]
     public async Task ImportAsync_ReportsPercentageProgress_ForAnyFile()
     {

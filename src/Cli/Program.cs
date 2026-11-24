@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Core.Configuration;
 using Microsoft.Extensions.Configuration;
 

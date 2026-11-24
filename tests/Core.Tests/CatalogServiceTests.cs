@@ -18,7 +18,7 @@ public class CatalogServiceTests
         var book = service.AddBook("ISBN-10", "Чистий код", 2008, "Р. Мартін", 1);
         service.IssueCopy(book.Id, "reader-1", DateTimeOffset.UtcNow.AddDays(14));
 
-        Assert.Throws<DomainException>(() => 
+        Assert.Throws<DomainException>(() =>
             service.IssueCopy(book.Id, "reader-2", DateTimeOffset.UtcNow.AddDays(14)));
         Assert.Equal(0, store.GetById(book.Id)!.AvailableCopies);
     }

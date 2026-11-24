@@ -29,20 +29,20 @@ public sealed class EfCatalogStore(AppDbContext db) : IBookStore
     public IReadOnlyList<Book> Find(Func<Book, bool> predicate) =>
         db.Books.AsNoTracking().AsEnumerable().Select(ToDomain).Where(predicate).ToList();
 
-    public void Add(Book item)
+    public void Add(Book book)
     {
-        db.Books.Add(ToRow(item));
+        db.Books.Add(ToRow(book));
         db.SaveChanges();
     }
 
-    public void Update(Book item)
+    public void Update(Book book)
     {
-        var row = db.Books.Single(x => x.Id == item.Id);
-        row.Isbn = item.Isbn;
-        row.Title = item.Title;
-        row.Year = item.Year;
-        row.Author = item.Author;
-        row.AvailableCopies = item.AvailableCopies;
+        var row = db.Books.Single(x => x.Id == book.Id);
+        row.Isbn = book.Isbn;
+        row.Title = book.Title;
+        row.Year = book.Year;
+        row.Author = book.Author;
+        row.AvailableCopies = book.AvailableCopies;
         db.SaveChanges();
     }
 

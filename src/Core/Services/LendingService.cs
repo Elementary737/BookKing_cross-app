@@ -23,16 +23,16 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
         {
             existingBook.AddCopies(availableCopies);
             _store.Update(existingBook);
-	    OnChanged(existingBook.Id, LibraryChangeKind.BookAdded);
-	    _sink?.Notify($"Книга [{existingBook.Id}]: додано {availableCopies} примірників");
+            OnChanged(existingBook.Id, LibraryChangeKind.BookAdded);
+            _sink?.Notify($"Книга [{existingBook.Id}]: додано {availableCopies} примірників");
             return existingBook;
         }
 
         var id = Guid.NewGuid().ToString("N")[..8];
         var book = Book.Create(id, isbn, title, year, author, availableCopies);
         _store.Add(book);
-	OnChanged(book.Id, LibraryChangeKind.BookAdded);
-	_sink?.Notify($"Книга [{id}]: зареєстровано в системі ({title})");
+        OnChanged(book.Id, LibraryChangeKind.BookAdded);
+        _sink?.Notify($"Книга [{id}]: зареєстровано в системі ({title})");
         return book;
     }
 
@@ -43,8 +43,8 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
 
         book.IssueCopy();
         _store.Update(book);
-	OnChanged(book.Id, LibraryChangeKind.CopyIssued, readerId, dueDate);
-	_sink?.Notify($"Книга [{id}]: видано примірник");
+        OnChanged(book.Id, LibraryChangeKind.CopyIssued, readerId, dueDate);
+        _sink?.Notify($"Книга [{id}]: видано примірник");
     }
 
     public void ReturnCopy(string id)
@@ -54,8 +54,8 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
 
         book.ReturnCopy();
         _store.Update(book);
-	OnChanged(book.Id, LibraryChangeKind.CopyReturned);
-	_sink?.Notify($"Книга [{id}]: повернуто примірник");
+        OnChanged(book.Id, LibraryChangeKind.CopyReturned);
+        _sink?.Notify($"Книга [{id}]: повернуто примірник");
     }
 
     public IReadOnlyList<Book> All() => _store.List();
@@ -66,7 +66,7 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
 
     public IReadOnlyList<Book> FindAll(Func<Book, bool> predicate) => Find(predicate);
 
-// Додаткове завдання 2: Пакетний імпорт із колбеком помилок Action
+    // Додаткове завдання 2: Пакетний імпорт із колбеком помилок Action
     public int ImportBooks(IEnumerable<string> rawLines, Action<int, string, string>? onRowSkipped = null)
     {
         int imported = 0;
@@ -111,12 +111,12 @@ public sealed class LendingService(IBookStore store, INotificationSink? sink = n
 
         return imported;
     }
-    
+
     public async Task<int> ImportAsync(ICatalogImporter importer, string path, CancellationToken ct = default, IProgress<double>? progress = null)
     {
-	// Додаткове 8.1
-	var count = 0;
-	await foreach (var book in importer.ReadStreamAsync(path, ct, progress))
+        // Додаткове 8.1
+        var count = 0;
+        await foreach (var book in importer.ReadStreamAsync(path, ct, progress))
         {
             _store.Add(book);
             count++;

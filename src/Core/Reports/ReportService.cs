@@ -28,14 +28,14 @@ public static class ReportService
               .ThenBy(s => s.Key)
               .ToList();
 
-// 3b) Групування за десятиліттями зі строгим хронологічним сортуванням від найдавніших до найновіших
+    // 3b) Групування за десятиліттями зі строгим хронологічним сортуванням від найдавніших до найновіших
     public static IReadOnlyList<GroupSummary> ByDecade(IEnumerable<Book> source) =>
         source.GroupBy(b => b.Year / 10 * 10)
               .OrderBy(g => g.Key) // Хронологічний порядок: 1880 -> 1890 -> ... -> 2020
               .Select(g => new GroupSummary($"{g.Key}-ті", g.Count(), g.Sum(b => b.AvailableCopies)))
               .ToList();
 
-// 4) Повні агрегати фонду: назви, примірники (сума, min, avg, max) та часові межі
+    // 4) Повні агрегати фонду: назви, примірники (сума, min, avg, max) та часові межі
     public static (int Titles, int TotalCopies, int MinCopies, double AverageCopies, int MaxCopies, int MinYear, int MaxYear) Totals(IEnumerable<Book> source)
     {
         var list = source.ToList();
@@ -49,7 +49,7 @@ public static class ReportService
                list.Min(b => b.Year),
                list.Max(b => b.Year));
     }
-// Додаткове 1: GroupJoin (Книги x Видачі)
+    // Додаткове 1: GroupJoin (Книги x Видачі)
     public static IReadOnlyList<BookLoanSummary> BookLoansReport(
         IEnumerable<Book> books,
         IEnumerable<Loan> loans) =>
@@ -71,7 +71,7 @@ public static class ReportService
             .ThenBy(s => s.BookTitle)
             .ToList();
 
-// Додаткове 2: TopBy у першому звіті (за кількістю примірників)
+    // Додаткове 2: TopBy у першому звіті (за кількістю примірників)
     public static IReadOnlyList<StockLine> TopCopiesByExtension(IEnumerable<Book> books, int n) =>
         books.TopBy(b => b.AvailableCopies, n)
              .Select(b => new StockLine(b.Isbn, b.Title, b.Author, b.Year, b.AvailableCopies))
@@ -83,7 +83,7 @@ public static class ReportService
              .Select(b => new StockLine(b.Isbn, b.Title, b.Author, b.Year, b.AvailableCopies))
              .ToList();
 
-// Додаткове 3: Синтаксис запитів (Query Syntax: from ... group ... by ... into ...)
+    // Додаткове 3: Синтаксис запитів (Query Syntax: from ... group ... by ... into ...)
     public static IReadOnlyList<GroupSummary> ByDecadeQuerySyntax(IEnumerable<Book> books)
     {
         var query = from b in books
@@ -94,7 +94,7 @@ public static class ReportService
         return query.ToList();
     }
 
-// Додаткове 4: Бенчмарк на 100 000 записах із ToList() і без нього
+    // Додаткове 4: Бенчмарк на 100 000 записах із ToList() і без нього
     public static (long WithListMs, long DirectMs) BenchmarkToList(int count = 100_000)
     {
         // 1. Генерація 100 000 об'єктів книг у пам'яті

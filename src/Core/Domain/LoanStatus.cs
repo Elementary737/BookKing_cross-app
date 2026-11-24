@@ -2,8 +2,8 @@ namespace Core.Domain;
 
 public enum LoanStatus
 {
-    Active,     
-    Returned,   
-    Overdue,   
-    Lost       
+    Active,
+    Returned,
+    Overdue,
+    Lost
 }

@@ -8,9 +8,9 @@ public class ReportServiceTests
 {
     // ТЕСТ 4: Параметризований тест звітності ([Theory])
     [Theory]
-    [InlineData(6, 2)] 
-    [InlineData(2, 1)] 
-    [InlineData(1, 0)] 
+    [InlineData(6, 2)]
+    [InlineData(2, 1)]
+    [InlineData(1, 0)]
     public void VintageOrLowStock_CountsOnlyBelowThreshold(int threshold, int expected)
     {
         var result = TestData.Books().Where(b => b.AvailableCopies < threshold).ToList();

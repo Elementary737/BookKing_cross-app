@@ -45,7 +45,7 @@ public sealed class BooksApiClient(HttpClient http)
         return SendAsync(HttpMethod.Put, $"api/books/{model.Id}", model, ct);
     }
 
-// [Додаткове 1] Надсилання DELETE-запиту на сервер
+    // [Додаткове 1] Надсилання DELETE-запиту на сервер
     public async Task<ApiResult> DeleteAsync(string id, CancellationToken ct = default)
     {
         try
@@ -98,7 +98,7 @@ public sealed class BooksApiClient(HttpClient http)
 
             var problem = await response.Content.ReadFromJsonAsync<ValidationProblemResponse>(ct);
             return new ApiResult(false, problem?.Title ?? "Дані не пройшли перевірку.", problem?.Errors);
-            
+
         }
         catch (HttpRequestException)
         {

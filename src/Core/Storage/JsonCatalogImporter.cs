@@ -1,8 +1,8 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Core.Abstractions;
 using Core.Domain;
 using Core.Dto;
-using System.Runtime.CompilerServices;
 
 namespace Core.Storage;
 
@@ -17,7 +17,7 @@ public sealed class JsonCatalogImporter : ICatalogImporter
     public async Task<IReadOnlyList<Book>> LoadAsync(string path, CancellationToken ct = default)
     {
 
-    ct.ThrowIfCancellationRequested();
+        ct.ThrowIfCancellationRequested();
 
         await using var stream = new FileStream(
             path,
@@ -29,14 +29,14 @@ public sealed class JsonCatalogImporter : ICatalogImporter
 
         var dtos = await JsonSerializer.DeserializeAsync<List<BookDto>>(
             stream,
-	    JsonOptions,
+        JsonOptions,
             cancellationToken: ct)
             ?? throw new DomainException($"Файл {Path.GetFileName(path)} не містить списку книг.");
 
         var result = new List<Book>(dtos.Count);
         for (var i = 0; i < dtos.Count; i++)
         {
-	    await Task.Delay(500, ct);
+            await Task.Delay(500, ct);
 
             ct.ThrowIfCancellationRequested();
             try
@@ -55,11 +55,11 @@ public sealed class JsonCatalogImporter : ICatalogImporter
     public async IAsyncEnumerable<Book> ReadStreamAsync(
         string path,
         [EnumeratorCancellation] CancellationToken ct = default,
-	IProgress<double>? progress = null)
+    IProgress<double>? progress = null)
     {
         ct.ThrowIfCancellationRequested();
 
-	var totalCount = await CountItemsAsync(path, ct);
+        var totalCount = await CountItemsAsync(path, ct);
 
         await using var stream = new FileStream(
             path,
@@ -76,7 +76,7 @@ public sealed class JsonCatalogImporter : ICatalogImporter
         {
             if (dto is null) continue;
 
-	    index++;
+            index++;
             await Task.Delay(200, ct);
 
             Book book;
@@ -88,8 +88,8 @@ public sealed class JsonCatalogImporter : ICatalogImporter
             {
                 throw new DomainException($"Запис {index}: {ex.Message}", ex);
             }
-	// Додаткове 8.3
-	    if (totalCount > 0 && progress is not null)
+            // Додаткове 8.3
+            if (totalCount > 0 && progress is not null)
             {
                 var percentage = (double)index / totalCount * 100.0;
                 progress.Report(Math.Min(100.0, percentage));
