@@ -3,6 +3,7 @@ using System.Text.Json;
 using Core.Abstractions;
 using Core.Domain;
 using Core.Dto;
+using Core.Exceptions;
 
 namespace Core.Storage;
 

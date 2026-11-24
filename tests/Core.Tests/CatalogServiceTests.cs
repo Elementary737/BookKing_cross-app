@@ -1,6 +1,7 @@
 using Core;
 using Core.Domain;
 using Core.Events;
+using Core.Exceptions;
 using Core.Services;
 using Core.Storage;
 using Xunit;

@@ -1,4 +1,5 @@
 using Core;
+using Core.Exceptions;
 using Core.Services;
 using Core.Storage;
 using Xunit;

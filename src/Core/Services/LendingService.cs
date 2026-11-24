@@ -1,6 +1,7 @@
 using Core.Abstractions;
 using Core.Domain;
 using Core.Events;
+using Core.Exceptions;
 
 namespace Core.Services;
 
