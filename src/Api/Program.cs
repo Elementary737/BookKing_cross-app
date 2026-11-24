@@ -1,11 +1,24 @@
+using System.Text.Json;
 using Api.Endpoints;
+using Api.Infrastructure;
 using Core.Abstractions;
 using Infrastructure;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 1. Єдиний стиль JSON (camelCase), заданий явно
+builder.Services.ConfigureHttpJsonOptions(o =>
+{
+    o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+});
+
+// 2. Реєстрація ProblemDetails та обробника DomainException
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 
 // Налаштування рядка підключення та бази даних SQLite
 var raw = builder.Configuration.GetConnectionString("AppDb") ?? "Data Source=data/app.db";
@@ -34,6 +47,10 @@ builder.Services.AddScoped<IBookStore, EfCatalogStore>();
 
 var app = builder.Build();
 
+// 3. Глобальний перехоплювач винятків (без stack trace у Production) та статус-кодів
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+
 // Автоматичне застосування міграцій у режимі розробки
 using (var scope = app.Services.CreateScope())
 {
@@ -44,6 +61,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseCors("web");
+
 // Реєструємо маршрути Minimal API
 app.MapBookEndpoints();
 

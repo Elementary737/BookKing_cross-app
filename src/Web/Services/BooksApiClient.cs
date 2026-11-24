@@ -85,6 +85,12 @@ public sealed class BooksApiClient(HttpClient http)
                 return new ApiResult(false, "Видання не знайдено — можливо, його вже видалили.");
             }
 
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                var conflict = await response.Content.ReadFromJsonAsync<ValidationProblemResponse>(ct);
+                return new ApiResult(false, conflict?.Detail ?? conflict?.Title ?? "Конфлікт бізнес-правил.");
+            }
+
             if (response.StatusCode != HttpStatusCode.BadRequest)
             {
                 return new ApiResult(false, $"Сервер повернув помилку {(int)response.StatusCode}.");
@@ -92,6 +98,7 @@ public sealed class BooksApiClient(HttpClient http)
 
             var problem = await response.Content.ReadFromJsonAsync<ValidationProblemResponse>(ct);
             return new ApiResult(false, problem?.Title ?? "Дані не пройшли перевірку.", problem?.Errors);
+            
         }
         catch (HttpRequestException)
         {

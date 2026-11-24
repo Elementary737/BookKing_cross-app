@@ -33,4 +33,7 @@ public sealed class BookModel
 
 public sealed record ApiResult(bool Ok, string? Message = null, Dictionary<string, string[]>? Errors = null);
 
-public sealed record ValidationProblemResponse(string? Title, Dictionary<string, string[]>? Errors);
+public sealed record ValidationProblemResponse(
+    string? Title,
+    Dictionary<string, string[]>? Errors = null,
+    string? Detail = null);
