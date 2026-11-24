@@ -11,7 +11,7 @@ public static class BookEndpoints
 {
     public static void MapBookEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/books").WithTags("Books");
+        var group = app.MapGroup("/api/v1/books").WithTags("Books");
 
         // 1. GET /api/books
         group.MapGet("/", (int page = 1, int pageSize = 20, string? search = null, string? author = null, string? sortBy = null, IBookStore store = null!) =>
@@ -79,7 +79,7 @@ public static class BookEndpoints
             var created = Book.Create(id, request.Isbn, request.Title, request.Year, request.Author, request.Copies);
             store.Add(created);
 
-            return TypedResults.Created($"/api/books/{created.Id}", created.ToApiDto());
+            return TypedResults.Created($"/api/v1/books/{created.Id}", created.ToApiDto());
         })
         .AddEndpointFilter<ValidationFilter<SaveBookRequest>>();
 

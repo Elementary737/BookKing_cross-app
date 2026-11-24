@@ -4,7 +4,24 @@ namespace Contracts;
 
 public sealed record BookDto(string Id, string Isbn, string Title, string Author, int Year, int Copies);
 
-public sealed record SaveBookRequest(string Isbn, string Title, string Author, int Year, int Copies);
+public sealed record SaveBookRequest(
+    [property: Required(ErrorMessage = "ISBN обов'язковий")]
+    [property: StringLength(32, ErrorMessage = "Максимальна довжина ISBN — 32 символи")]
+    string Isbn,
+
+    [property: Required(ErrorMessage = "Назва видання обов'язкова")]
+    [property: StringLength(200, ErrorMessage = "Максимальна довжина назви — 200 символів")]
+    string Title,
+
+    [property: Required(ErrorMessage = "Автор обов'язковий")]
+    [property: StringLength(150, ErrorMessage = "Максимальна довжина імені автора — 150 символів")]
+    string Author,
+
+    [property: Range(1000, 2100, ErrorMessage = "Вкажіть коректний рік видання")]
+    int Year,
+
+    [property: Range(0, int.MaxValue, ErrorMessage = "Кількість примірників не може бути від'ємною")]
+    int Copies);
 
 public sealed record PagedResult<T>(List<T> Items, int Total, int Page, int PageSize);
 

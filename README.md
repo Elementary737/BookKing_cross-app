@@ -22,42 +22,30 @@
 ```text
 BookKing/
 ├── BookKing.sln
+├── Directory.Build.props           # Спільні налаштування компіляції (LangVersion, Nullable, Analyzers, TreatWarningsAsErrors)
+├── .editorconfig                   # Правила стилю коду та форматування
 ├── README.md
 ├── .gitignore
 │
-├── data/
-│   ├── sample.csv                  # Книги у форматі CSV (Лабораторна 3)
-│   ├── sample.json                 # Книги у форматі JSON для потокового імпорту (Лабораторна 8)
-│   ├── mixed.csv                   # Змішані дані B; та R; (Лабораторна 3)
-│   └── books.json                  # Збереження каталогу на диск (Лабораторна 5)
-│
-├── logs/
-│   └── sink_notifications.log      # Журнал сповіщень FileSink (Лабораторна 6)
-│
 ├── src/
-│   ├── Contracts/                  # Спільна бібліотека контрактів і моделей (Лабораторна 12)
+│   ├── Contracts/                  # Спільна бібліотека контрактів і моделей
 │   │   ├── Contracts.csproj
-│   │   ├── BookDto.cs              # DTO книги для обміну між Api та Web
-│   │   ├── BookModel.cs            # Модель форми Blazor з атрибутами DataAnnotations
-│   │   ├── PagedResult.cs          # Пагінований результат пошуку
-│   │   ├── SaveBookRequest.cs      # Запит на створення/оновлення книги
-│   │   └── ValidationProblemResponse.cs # Модель відповіді сервера 400 ValidationProblem
+│   │   ├── BookModels.cs           # DTO (BookDto, SaveBookRequest, PagedResult, ValidationProblemResponse) та BookModel
+│   │   └── BookMappingExtensions.cs # Мапінг між сутностями Core та DTO
 │   │
 │   ├── Core/
 │   │   ├── Core.csproj
 │   │   ├── DomainException.cs      # Доменні винятки валідації даних та бізнес-правил
 │   │   ├── EnvironmentInfo.cs
-│   │   ├── SampleData.cs           # Початковий набір зразкових книг
-│   │   ├── INotificationSink.cs    # Контракт каналу сповіщень (Лабораторна 6)
-│   │   ├── Configuration/          # Моделі параметрів конфігурації
-│   │   ├── Dto/                    # DTO десеріалізації для потокового читання
-│   │   ├── Domain/                 # Доменні сутності (Book, Loan, LoanStatus) та інваріанти
-│   │   ├── Events/                 # Доменні події додавання книг (LibraryChanged)
-│   │   ├── Reports/                # Аналітичні звіти та LINQ-розширення
 │   │   ├── Abstractions/           # Інтерфейси IBookStore, ICatalogImporter
-│   │   ├── Storage/                # InMemory, File, Caching сховища та JsonCatalogImporter
+│   │   ├── Configuration/          # Моделі параметрів конфігурації
+│   │   ├── Domain/                 # Доменні сутності (Book, BookCopy, Loan, LoanStatus) та інваріанти
+│   │   ├── Dto/                    # DTO десеріалізації для потокового читання
+│   │   ├── Events/                 # Доменні події додавання книг (LibraryChanged)
+│   │   ├── Import/                 # CSV та JSON імпортери
+│   │   ├── Reports/                # Аналітичні звіти та LINQ-розширення
 │   │   ├── Services/               # LendingService з підтримкою CancellationToken
-│   │   └── Import/                 # CSV та JSON імпортери
+│   │   └── Storage/                # InMemory, File, Caching сховища та JsonCatalogImporter
 │   │
 │   ├── Infrastructure/
 │   │   ├── Infrastructure.csproj   # EF Core, Microsoft.EntityFrameworkCore.Sqlite
@@ -69,20 +57,20 @@ BookKing/
 │   ├── Api/
 │   │   ├── Api.csproj              # Веб-проєкт (Minimal API)
 │   │   ├── Program.cs              # Конфігурація SQLite, реєстрація EfCatalogStore, автоміграції
-│   │   ├── Api.http                # Шаблони HTTP-запитів для тестування ендпоінтів
+│   │   ├── Api.http                # Шаблони HTTP-запитів для тестування ендпоінтів /api/v1/books
 │   │   ├── Endpoints/
-│   │   │   └── BookEndpoints.cs    # Маршрутизація CRUD, пошук (search, author), сортування (sortBy)
-│   │   ├── Validation/
-│   │   │   └── ValidationFilter.cs # Фільтр валідації запитів із логуванням 400 Bad Request
-│   │   └── data/
-│   │       └── app.db              # Локальна база даних SQLite (ігнорується в Git)
+│   │   │   └── BookEndpoints.cs    # Маршрутизація CRUD (/api/v1/books), пошук, фільтрація, сортування
+│   │   ├── Infrastructure/
+│   │   │   └── DomainExceptionHandler.cs # Глобальний обробник DomainException у форматі ProblemDetails
+│   │   └── Validation/
+│   │       └── ValidationFilter.cs # Фільтр валідації запитів із логуванням 400 Bad Request
 │   │
-│   ├── Web/                        # Веб-інтерфейс на Blazor Interactive Server (Лабораторна 12)
+│   ├── Web/                        # Веб-інтерфейс на Blazor Interactive Server
 │   │   ├── Web.csproj
 │   │   ├── Program.cs              # Реєстрація типізованого клієнта AddHttpClient<BooksApiClient>
 │   │   ├── appsettings.json        # Конфігурація ApiBaseUrl ("http://localhost:5080")
 │   │   ├── Services/
-│   │   │   └── BooksApiClient.cs   # Типізований HTTP-клієнт (CRUD, CancellationToken, обробка 400/404)
+│   │   │   └── BooksApiClient.cs   # Типізований HTTP-клієнт до /api/v1/books (CRUD, CancellationToken, 400/404)
 │   │   └── Components/
 │   │       ├── Layout/
 │   │       │   └── NavMenu.razor   # Навігаційне меню (Home, Каталог книг)
@@ -91,20 +79,53 @@ BookKing/
 │   │           └── BookEdit.razor  # Форма створення та редагування книги (клієнтська + серверна валідація)
 │   │
 │   └── Cli/
-│       ├── Cli.csproj              # Консольний клієнт (Лабораторні 1–9)
+│       ├── Cli.csproj              # Консольний клієнт
 │       ├── appsettings.json
 │       ├── appsettings.Development.json
-│       ├── Sinks.cs
 │       └── Program.cs
 │
 └── tests/
     ├── Core.Tests/
-    │   ├── Core.Tests.csproj       # Юніт-тести потокового імпорту, таймауту, CancellationToken
-    │   └── ImportTests.cs
+    │   ├── Core.Tests.csproj       # Юніт-тести домену, імпорту та архітектурної ізоляції
+    │   ├── ImportTests.cs
+    │   └── ArchitectureGuardTests.cs # Тест-вартовий ізоляції збірки Core від EF Core та Infrastructure
     │
     └── Api.Tests/
-        ├── Api.Tests.csproj        # Інтеграційні тести API (WebApplicationFactory)
+        ├── Api.Tests.csproj        # Інтеграційні тести API (WebApplicationFactory + тимчасова БД у %TEMP%)
         └── BookApiIntegrationTests.cs
+```
+
+---
+
+## Команди для збірки, перевірки та запуску
+
+### Перевірка якості коду, форматування та тестування
+
+```bash
+# Відновити пакети NuGet
+dotnet restore
+
+# Перевірити форматування коду згідно з .editorconfig
+dotnet format --verify-no-changes
+
+# Зібрати рішення в режимі суворої перевірки (попередження як помилки)
+dotnet build -warnaserror
+
+# Запустити всі модульні, архітектурні та інтеграційні тести
+dotnet test
+```
+
+### Запуск застосунків
+
+```bash
+# 1. Запуск Minimal API (http://localhost:5080, OpenAPI/Swagger: /openapi/v1.json)
+dotnet run --project src/Api
+
+# 2. Запуск Blazor Web-інтерфейсу (у другому терміналі, після запуску Api)
+dotnet run --project src/Web
+
+# 3. Запуск консольного клієнта CLI
+dotnet run --project src/Cli
 ```
 
 ---
@@ -112,12 +133,22 @@ BookKing/
 ## Архітектура
 
 Залежності спрямовані всередину до доменної моделі:
-- `Core` — доменні сутності (`Book`, `Loan`, `LoanStatus`), бізнес-інваріанти (`LendingService`), винятки (`DomainException`) та інтерфейси (`IBookStore`, `ICatalogImporter`). Не залежить від інших проєктів та інфраструктурних пакетів.
+- `Core` — доменні сутності (`Book`, `BookCopy`, `Loan`, `LoanStatus`), бізнес-інваріанти (`LendingService`), винятки (`DomainException`) та інтерфейси (`IBookStore`, `ICatalogImporter`). Не залежить від інших проєктів та інфраструктурних пакетів.
 - `Contracts` — спільні DTO та контракти (`BookDto`, `SaveBookRequest`, `PagedResult`, `ValidationProblemResponse`) для взаємодії між `Api` та `Web`.
 - `Infrastructure` -> `Core` — реалізація сховищ на базі EF Core та SQLite (`AppDbContext`, `EfCatalogStore`, міграції).
-- `Api` -> `Core`, `Contracts`, `Infrastructure` — Minimal API (`BookEndpoints`), валідація (`ValidationFilter`), обробка помилок (`ProblemDetails`), конфігурація DI.
+- `Api` -> `Core`, `Contracts`, `Infrastructure` — Minimal API (`BookEndpoints`), валідація (`ValidationFilter`), обробка помилок (`DomainExceptionHandler`, `ProblemDetails`), конфігурація DI.
 - `Cli` -> `Core` — консольний клієнт для імпорту, звітів та роботи зі сховищами.
 - `Web` -> `Contracts` — Blazor-клієнт (`BooksApiClient`), що взаємодіє з `Api` лише через HTTP-контракт.
-- `Core.Tests` -> `Core` — модульні тести домену та архітектурний тест ізоляції.
+- `Core.Tests` -> `Core` — модульні тести домену та архітектурний тест ізоляції (`ArchitectureGuardTests`).
 - `Api.Tests` -> `Api`, `Contracts` — інтеграційні тести ендпоінтів API.
 
+---
+
+## Версіонування API та політика сумісності
+
+Усі HTTP-маршрути каталогу книг використовують префікс версії у шляху: `/api/v1/books`.
+
+### Політика підтримки версії `v1` після змін контракту
+- **Зворотньо сумісні зміни (non-breaking):** додавання нових необов'язкових полів у відповіді або нових необов'язкових query-параметрів вносяться безпосередньо у `v1` без зміни версії маршруту.
+- **Несумісні зміни контракту (breaking changes):** перейменування чи видалення полів DTO, зміна типів даних, зміна обов'язкових параметрів або семантики кодів відповідей потребують створення нової версії маршрутів (`/api/v2/books`).
+- **Життєвий цикл `v1` після запуску `v2`:** маршрути `/api/v1/...` залишаються активними протягом перехідного періоду (deprecation window) із передачею заголовка `Deprecation: true` та посилання на актуальну версію документації, доки всі клієнти (`Web` та зовнішні інтеграції) не перейдуть на `v2`.
