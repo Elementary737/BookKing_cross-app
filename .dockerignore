@@ -1,0 +1,13 @@
+bin/
+obj/
+**/bin/
+**/obj/
+.git/
+.vs/
+.vscode/
+data/
+*.db
+*.db-shm
+*.db-wal
+Dockerfile
+docker-compose.yml

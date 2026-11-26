@@ -1,0 +1,15 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__AppDb=Data Source=/app/data/app.db
+      - Cors__WebOrigin=http://localhost:5090
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
