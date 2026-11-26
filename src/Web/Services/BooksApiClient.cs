@@ -17,8 +17,8 @@ public sealed class BooksApiClient(HttpClient http)
             queryParams.Add($"sortBy={Uri.EscapeDataString(sortBy)}");
 
         var url = queryParams.Count > 0
-            ? $"api/books?{string.Join("&", queryParams)}"
-            : "api/books";
+            ? $"api/v1/books?{string.Join("&", queryParams)}"
+            : "api/v1/books";
 
         var page = await http.GetFromJsonAsync<PagedResult<BookModel>>(url, ct);
         return page?.Items ?? [];
@@ -26,7 +26,7 @@ public sealed class BooksApiClient(HttpClient http)
 
     public async Task<BookModel?> FindAsync(string id, CancellationToken ct = default)
     {
-        using var response = await http.GetAsync($"api/books/{id}", ct);
+        using var response = await http.GetAsync($"api/v1/books/{id}", ct);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return null;
@@ -37,12 +37,12 @@ public sealed class BooksApiClient(HttpClient http)
 
     public Task<ApiResult> CreateAsync(BookModel model, CancellationToken ct = default)
     {
-        return SendAsync(HttpMethod.Post, "api/books", model, ct);
+        return SendAsync(HttpMethod.Post, "api/v1/books", model, ct);
     }
 
     public Task<ApiResult> UpdateAsync(BookModel model, CancellationToken ct = default)
     {
-        return SendAsync(HttpMethod.Put, $"api/books/{model.Id}", model, ct);
+        return SendAsync(HttpMethod.Put, $"api/v1/books/{model.Id}", model, ct);
     }
 
     // [Додаткове 1] Надсилання DELETE-запиту на сервер
@@ -50,7 +50,7 @@ public sealed class BooksApiClient(HttpClient http)
     {
         try
         {
-            using var response = await http.DeleteAsync($"api/books/{id}", ct);
+            using var response = await http.DeleteAsync($"api/v1/books/{id}", ct);
             if (response.IsSuccessStatusCode)
                 return new ApiResult(true);
 

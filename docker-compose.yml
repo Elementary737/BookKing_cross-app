@@ -4,12 +4,29 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      # [Додаткове 3] Підстановка порту API з файлу .env
+      - "${API_PORT:-8080}:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
-      - ConnectionStrings__AppDb=Data Source=/app/data/app.db
-      - Cors__WebOrigin=http://localhost:5090
+      # [Додаткове 3] Підстановка назви файлу БД з файлу .env
+      - ConnectionStrings__AppDb=Data Source=/app/data/${DB_NAME:-app.db}
+      # [Додаткове 1 + 3] Дозвіл CORS для клієнта web із портом з .env
+      - Cors__WebOrigin=http://localhost:${WEB_PORT:-5090}
     volumes:
       - ./data:/app/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: src/Web/Dockerfile
+    ports:
+      - "${WEB_PORT:-5090}:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - Api__BaseUrl=http://api:8080
+    depends_on:
+      - api
     restart: unless-stopped

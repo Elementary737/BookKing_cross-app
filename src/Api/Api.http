@@ -4,7 +4,7 @@
 
 ### 1. Створення книги (POST 201)
 # @name createBook
-POST {{host}}/api/books
+POST {{host}}/api/v1/books
 Content-Type: application/json
 
 {
@@ -16,7 +16,7 @@ Content-Type: application/json
 }
 
 ### 2. Валідація помилок (POST 400)
-POST {{host}}/api/books
+POST {{host}}/api/v1/books
 Content-Type: application/json
 
 {
@@ -28,14 +28,14 @@ Content-Type: application/json
 }
 
 ### 3. Отримання списку книг
-GET {{host}}/api/books
+GET {{host}}/api/v1/books
 
 ### 4. Отримання книги за ID
 @createdId = {{createBook.response.body.id}}
-GET {{host}}/api/books/{{createdId}}
+GET {{host}}/api/v1/books/{{createdId}}
 
 ### 5. Оновлення книги (PUT 200)
-PUT {{host}}/api/books/{{createdId}}
+PUT {{host}}/api/v1/books/{{createdId}}
 Content-Type: application/json
 
 {
@@ -47,7 +47,7 @@ Content-Type: application/json
 }
 
 ### 6. Видалення книги (DELETE 204)
-DELETE {{host}}/api/books/{{createdId}}
+DELETE {{host}}/api/v1/books/{{createdId}}
 
 ### 7. Перевірка 404 після видалення
-GET {{host}}/api/books/{{createdId}}
+GET {{host}}/api/v1/books/{{createdId}}

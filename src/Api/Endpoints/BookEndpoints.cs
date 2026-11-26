@@ -13,7 +13,7 @@ public static class BookEndpoints
     {
         var group = app.MapGroup("/api/v1/books").WithTags("Books");
 
-        // 1. GET /api/books
+        // 1. GET /api/v1/books
         group.MapGet("/", (int page = 1, int pageSize = 20, string? search = null, string? author = null, string? sortBy = null, IBookStore store = null!) =>
         {
             page = page < 1 ? 1 : page;
@@ -54,7 +54,7 @@ public static class BookEndpoints
             return TypedResults.Ok(new PagedResult<BookDto>(items, total, page, pageSize));
         });
 
-        // 2. GET /api/books/{id}
+        // 2. GET /api/v1/books/{id}
         group.MapGet("/{id}", Results<Ok<BookDto>, ProblemHttpResult> (string id, IBookStore store) =>
             store.GetById(id) is { } book
                 ? TypedResults.Ok(book.ToApiDto())
@@ -63,7 +63,7 @@ public static class BookEndpoints
                     title: "Book not found",
                     detail: $"Book with id '{id}' was not found."));
 
-        // 3. POST /api/books
+        // 3. POST /api/v1/books
         group.MapPost("/", Results<Created<BookDto>, ValidationProblem> (SaveBookRequest request, IBookStore store) =>
         {
             if (store.List().Any(b => b.Isbn.Equals(request.Isbn.Trim(), StringComparison.OrdinalIgnoreCase)))
@@ -83,7 +83,7 @@ public static class BookEndpoints
         })
         .AddEndpointFilter<ValidationFilter<SaveBookRequest>>();
 
-        // 4. PUT /api/books/{id}
+        // 4. PUT /api/v1/books/{id}
         group.MapPut("/{id}", Results<Ok<BookDto>, ProblemHttpResult, ValidationProblem> (string id, SaveBookRequest request, IBookStore store) =>
         {
             var existingBook = store.GetById(id);
@@ -112,7 +112,7 @@ public static class BookEndpoints
         })
         .AddEndpointFilter<ValidationFilter<SaveBookRequest>>();
 
-        // 5. DELETE /api/books/{id}
+        // 5. DELETE /api/v1/books/{id}
         group.MapDelete("/{id}", Results<NoContent, ProblemHttpResult> (string id, IBookStore store) =>
             store.Remove(id)
                 ? TypedResults.NoContent()
